@@ -6,40 +6,22 @@ import (
 	"os"
 
 	"github.com/TNK-Studio/gortal/src/config"
-	"github.com/TNK-Studio/gortal/src/pui"
-	"github.com/manifoldco/promptui"
+	"github.com/TNK-Studio/gortal/src/core/pui"
+	"github.com/TNK-Studio/gortal/src/core/state"
 )
 
-var configPath = flag.String("c", fmt.Sprintf("%s%s", os.Getenv("HOME"), "/.gortal.yml"), "Config file")
+var (
+	username *string
+)
 
-func SubPromptSelect(prompt promptui.Select, itemsMap *map[string][]string) {
-	for {
-		_, result, err := prompt.Run()
-
-		if err != nil {
-			fmt.Printf("Prompt failed %v\n", err)
-			return
-		}
-
-		if result == "quit" {
-			break
-		}
-
-		if itemsMap != nil {
-			subSelect := promptui.Select{
-				Label: "Select Day",
-				Items: (*itemsMap)[result],
-			}
-			SubPromptSelect(subSelect, nil)
-		} else {
-			break
-		}
-	}
+func init() {
+	config.ConfPath = flag.String("c", fmt.Sprintf("%s%s", os.Getenv("HOME"), "/.gortal.yml"), "Config file")
+	username = flag.String("u", "", "Username")
 }
 
 func setupConfig() {
 	fmt.Println("Config file not found. Setup config.", *config.ConfPath)
-	_, _, err := pui.CreateUser(false, true)
+	_, user, err := pui.CreateUser(false, true)
 	if err != nil {
 		return
 	}
@@ -52,34 +34,51 @@ func setupConfig() {
 		return
 	}
 	config.Conf.SaveTo(*config.ConfPath)
+	state.CurrentUser = user
+}
+
+func setCurrentUser() {
+	if state.CurrentUser == nil {
+		if *username == "" {
+			fmt.Printf("Please specify a username")
+			return
+		}
+
+		for _, user := range *config.Conf.Users {
+			if user.Username == *username {
+				state.CurrentUser = user
+				break
+			}
+		}
+		if state.CurrentUser == nil {
+			fmt.Printf("Usename '%s' not existed\n", *username)
+			return
+		}
+	}
+
+	fmt.Printf("Current user is '%s'\n", state.CurrentUser.Username)
 }
 
 func main() {
 	flag.Parse()
-	if *configPath == "" {
+
+	if *config.ConfPath == "" {
 		fmt.Println("Please specify a config file.")
 		return
 	}
-	fmt.Println("Read config file", *configPath)
-	config.ConfPath = configPath
+	fmt.Println("Read config file", *config.ConfPath)
 	if !config.ConfigFileExisted(*config.ConfPath) {
 		setupConfig()
 	} else {
 		config.Conf.ReadFrom(*config.ConfPath)
-		server1 := (*config.Conf.Servers)["server1"]
-		fmt.Println(server1)
+		if config.Conf.Users == nil || len(*config.Conf.Users) < 1 {
+			_, user, err := pui.CreateUser(false, true)
+			if err != nil {
+				return
+			}
+			state.CurrentUser = user
+		}
 	}
-
-	// items1 := []string{"1", "2", "3"}
-	// items1Map := &map[string][]string{
-	// 	"1": []string{"1.1"},
-	// 	"2": []string{"2.1"},
-	// 	"3": []string{"3.1"},
-	// }
-	// prompt := promptui.Select{
-	// 	Label: "Select Day",
-	// 	Items: items1,
-	// }
-
-	// SubPromptSelect(prompt, items1Map)
+	setCurrentUser()
+	pui.ShowMainMenu()
 }

@@ -58,7 +58,7 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 		return nil, nil, err
 	}
 
-	var IsAdminString string
+	IsAdminString := ""
 	if showAdminSelect && !isAdmin {
 		adminPui := promptui.Prompt{
 			Label:    "Is admin ? yes/no",
@@ -71,6 +71,10 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 		}
 	}
 
-	key, user := config.Conf.AddUser(username, passwd, IsAdminString == "yes" || isAdmin)
+	isAdmin = IsAdminString == "yes" || isAdmin
+	if isAdmin {
+		fmt.Println("Create a admin user")
+	}
+	key, user := config.Conf.AddUser(username, passwd, isAdmin)
 	return &key, user, nil
 }

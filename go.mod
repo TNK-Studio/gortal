@@ -8,6 +8,7 @@ require (
 	github.com/gliderlabs/ssh v0.2.2
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/manifoldco/promptui v0.6.0
+	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	golang.org/x/crypto v0.0.0-20191128160524-b544559bb6d1 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2

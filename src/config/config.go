@@ -34,7 +34,7 @@ type Config struct {
 type User struct {
 	Username   string `yaml:"username"`
 	HashPasswd string `yaml:"hashPasswd"`
-	admin      bool   `yaml:"admin"`
+	Admin      bool   `yaml:"admin"`
 }
 
 // Server server
@@ -86,7 +86,7 @@ func (c *Config) AddUser(username string, password string, IsAdmin bool) (string
 	user := &User{
 		Username:   username,
 		HashPasswd: password,
-		admin:      IsAdmin,
+		Admin:      IsAdmin,
 	}
 	userAmount := len(*c.Users) + 1
 	log.Printf("Add user, user amount: %d", userAmount)
