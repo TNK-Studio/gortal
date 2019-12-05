@@ -135,6 +135,48 @@ func (c *Config) AddServerSSHUser(serverKey string, username string, identityFil
 	return key, sshUser
 }
 
+// GetUserServers get user servers list
+func (c *Config) GetUserServers(user *User) []Server {
+	servers := make([]Server, 0)
+	for _, server := range *c.Servers {
+	loop:
+		for _, sshUser := range *server.SSHUsers {
+			if sshUser.AllowUsers == nil {
+				break loop
+			}
+
+			for _, username := range *sshUser.AllowUsers {
+				if user.Username == username {
+					break loop
+				}
+			}
+		}
+		servers = append(
+			servers,
+			*server,
+		)
+	}
+	return servers
+}
+
+// GetServerSSHUsers get all allow server' s ssh users
+func (c *Config) GetServerSSHUsers(user *User, server *Server) []SSHUser {
+	sshUsers := make([]SSHUser, 0)
+	for _, sshUser := range *server.SSHUsers {
+		if sshUser.AllowUsers == nil {
+			sshUsers = append(sshUsers, *sshUser)
+			continue
+		}
+
+		for _, username := range *sshUser.AllowUsers {
+			if user.Username == username {
+				sshUsers = append(sshUsers, *sshUser)
+			}
+		}
+	}
+	return sshUsers
+}
+
 // ConfigFileExisted check config file is existed
 func ConfigFileExisted(path string) bool {
 	info, err := os.Stat(path)

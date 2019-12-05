@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/TNK-Studio/gortal/src/config"
-	"github.com/manifoldco/promptui"
+	"github.com/elfgzp/promptui"
 )
 
 // CreateUser new user
@@ -19,6 +19,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			}
 			return nil
 		},
+		Stdin:  Sess,
+		Stdout: Sess,
 	}
 
 	username, err := usernamePui.Run()
@@ -34,7 +36,9 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			}
 			return nil
 		},
-		Mask: '*',
+		Mask:   '*',
+		Stdin:  Sess,
+		Stdout: Sess,
 	}
 
 	passwd, err := passwdPui.Run()
@@ -50,7 +54,9 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			}
 			return nil
 		},
-		Mask: '*',
+		Mask:   '*',
+		Stdin:  Sess,
+		Stdout: Sess,
 	}
 
 	_, err = confirmPasswdPui.Run()
@@ -63,6 +69,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 		adminPui := promptui.Prompt{
 			Label:    "Is admin ? yes/no",
 			Validate: YesOrNo(),
+			Stdin:    Sess,
+			Stdout:   Sess,
 		}
 
 		IsAdminString, err = adminPui.Run()

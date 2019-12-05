@@ -3,12 +3,14 @@ package pui
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/TNK-Studio/gortal/src/config"
-	"github.com/manifoldco/promptui"
+	"github.com/TNK-Studio/gortal/src/core/sshd"
+	"github.com/TNK-Studio/gortal/src/core/state"
+	"github.com/TNK-Studio/gortal/src/utils"
+	"github.com/elfgzp/promptui"
 )
 
 // AddServer add server to config
@@ -17,6 +19,8 @@ func AddServer() (*string, *config.Server, error) {
 	namePui := promptui.Prompt{
 		Label:    "Server name",
 		Validate: Required("server name"),
+		Stdin:    Sess,
+		Stdout:   Sess,
 	}
 
 	name, err := namePui.Run()
@@ -27,6 +31,8 @@ func AddServer() (*string, *config.Server, error) {
 	hostPui := promptui.Prompt{
 		Label:    "Server host",
 		Validate: Required("server host"),
+		Stdin:    Sess,
+		Stdout:   Sess,
 	}
 
 	host, err := hostPui.Run()
@@ -43,6 +49,8 @@ func AddServer() (*string, *config.Server, error) {
 			},
 		),
 		Default: "22",
+		Stdin:   Sess,
+		Stdout:  Sess,
 	}
 
 	portString, err := portPui.Run()
@@ -62,6 +70,8 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 	usernamePui := promptui.Prompt{
 		Label:    "SSH username",
 		Validate: Required("SSH username"),
+		Stdin:    Sess,
+		Stdout:   Sess,
 	}
 
 	username, err := usernamePui.Run()
@@ -75,7 +85,7 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 			[](func(string) error){
 				Required("identity file path"),
 				func(input string) error {
-					input = strings.Replace(input, "~", os.Getenv("HOME"), 1)
+					input = utils.FilePath(input)
 					if !config.ConfigFileExisted(input) {
 						return errors.New(fmt.Sprintf("Identity file '%s' not existed", input))
 					}
@@ -83,6 +93,8 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 				},
 			},
 		),
+		Stdin:  Sess,
+		Stdout: Sess,
 	}
 
 	identityFile, err := identityFilePui.Run()
@@ -93,6 +105,8 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 	allowAllUserPui := promptui.Prompt{
 		Label:    "Allow all user access ? yes/no",
 		Validate: YesOrNo(),
+		Stdin:    Sess,
+		Stdout:   Sess,
 	}
 
 	allAllUser, err := allowAllUserPui.Run()
@@ -114,7 +128,12 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 								if username == each {
 									break
 								}
-								return errors.New(fmt.Sprintf("Username '%s' of user not existed. Please choose from %v.", username, userList))
+								return errors.New(fmt.Sprintf(
+									"Username '%s' of user not existed. Please choose from %v.",
+									username,
+									userList,
+								),
+								)
 							}
 						}
 						return nil
@@ -137,4 +156,53 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 	}
 	key, sshUser := config.Conf.AddServerSSHUser(serverKey, username, identityFile, allowUsers)
 	return &key, sshUser, nil
+}
+
+// GetServerSSHUsersMenu get server ssh users menu
+func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem) *[]MenuItem {
+	return func(index int, menuItem *MenuItem) *[]MenuItem {
+		menu := make([]MenuItem, 0)
+		sshUsers := (*config.Conf).GetServerSSHUsers(state.CurrentUser, server)
+		for _, sshUser := range sshUsers {
+			menu = append(
+				menu,
+				MenuItem{
+					Label: sshUser.SSHUsername,
+					SelectedFunc: func(int, *MenuItem) error {
+						err := sshd.Connect(
+							server.Host,
+							server.Port,
+							sshUser.SSHUsername,
+							sshUser.IdentityFile,
+							&Sess,
+						)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				},
+			)
+		}
+		return &menu
+	}
+}
+
+// GetServersMenu get servers menu
+func GetServersMenu() func(int, *MenuItem) *[]MenuItem {
+	return func(index int, menuItem *MenuItem) *[]MenuItem {
+		menu := make([]MenuItem, 0)
+		servers := (*config.Conf).GetUserServers(state.CurrentUser)
+		for _, server := range servers {
+			menu = append(
+				menu,
+				MenuItem{
+					Label:        server.Name,
+					SubMenuTitle: fmt.Sprintf("Please select ssh user to login '%s'", server.Name),
+					GetSubMenu:   GetServerSSHUsersMenu(&server),
+				},
+			)
+		}
+		return &menu
+	}
 }

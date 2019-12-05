@@ -3,53 +3,21 @@ package pui
 import (
 	"fmt"
 
-	"github.com/TNK-Studio/gortal/src/config"
 	"github.com/TNK-Studio/gortal/src/core/state"
 	"github.com/TNK-Studio/gortal/src/utils/logger"
-	"github.com/manifoldco/promptui"
+	"github.com/elfgzp/promptui"
 )
 
 // MainMenu main menu
 var MainMenu *[]MenuItem
 
-func defaultShow(*MenuItem) bool { return true }
+func defaultShow(int, *MenuItem) bool { return true }
 
-func isAdmin(*MenuItem) bool { return state.CurrentUser.Admin }
+func isAdmin(int, *MenuItem) bool { return state.CurrentUser.Admin }
 
-func staticSubMenu(subMenu *[]MenuItem) func(*MenuItem) *[]MenuItem {
-	return func(*MenuItem) *[]MenuItem {
+func staticSubMenu(subMenu *[]MenuItem) func(int, *MenuItem) *[]MenuItem {
+	return func(int, *MenuItem) *[]MenuItem {
 		return subMenu
-	}
-}
-
-func getListserversMenu() func(*MenuItem) *[]MenuItem {
-	return func(*MenuItem) *[]MenuItem {
-		menu := make([]MenuItem, 0)
-		for _, server := range *config.Conf.Servers {
-			show := false
-		loop:
-			for _, sshUser := range *server.SSHUsers {
-				if sshUser.AllowUsers == nil {
-					show = true
-					break loop
-				}
-
-				for _, username := range *sshUser.AllowUsers {
-					if state.CurrentUser.Username == username {
-						show = true
-						break loop
-					}
-				}
-			}
-			menu = append(
-				menu,
-				MenuItem{
-					Label:  server.Name,
-					IsShow: func(*MenuItem) bool { return show },
-				},
-			)
-		}
-		return &menu
 	}
 }
 
@@ -58,7 +26,7 @@ func init() {
 		MenuItem{
 			Label:      "List servers",
 			IsShow:     defaultShow,
-			GetSubMenu: getListserversMenu(),
+			GetSubMenu: GetServersMenu(),
 		},
 		MenuItem{
 			Label:  "Edit users",
@@ -84,9 +52,10 @@ func init() {
 // MenuItem menu item
 type MenuItem struct {
 	Label           string
-	IsShow          func(*MenuItem) bool
-	GetSubMenu      func(*MenuItem) *[]MenuItem
-	SelectedFunc    func(*MenuItem) error
+	IsShow          func(int, *MenuItem) bool
+	SubMenuTitle    string
+	GetSubMenu      func(int, *MenuItem) *[]MenuItem
+	SelectedFunc    func(int, *MenuItem) error
 	backOptionLabel string
 }
 
@@ -95,8 +64,12 @@ func ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) {
 	for {
 		menus := make([]string, 0)
 		logger.Logger.Debugf("Show menu %+v", *menu)
-		for _, menuItem := range *menu {
-			if menuItem.IsShow == nil || menuItem.IsShow(&menuItem) {
+		if menu == nil {
+			return
+		}
+
+		for index, menuItem := range *menu {
+			if menuItem.IsShow == nil || menuItem.IsShow(index, &menuItem) {
 				menus = append(menus, menuItem.Label)
 			}
 		}
@@ -105,8 +78,10 @@ func ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) {
 		backIndex := len(menus) - 1
 
 		menuPui := promptui.Select{
-			Label: label,
-			Items: menus,
+			Label:  label,
+			Items:  menus,
+			Stdin:  Sess,
+			Stdout: Sess,
 		}
 
 		index, subMenuLabel, err := menuPui.Run()
@@ -121,20 +96,31 @@ func ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) {
 		}
 
 		selected := (*menu)[index]
+		logger.Logger.Debugf("Selected: %+v", selected)
 
 		if selected.GetSubMenu != nil {
+
 			getSubMenu := selected.GetSubMenu
-			subMenu := getSubMenu(&selected)
-			back := "back"
-			if selected.backOptionLabel != "" {
-				back = selected.backOptionLabel
+			subMenu := getSubMenu(index, &selected)
+
+			if subMenu != nil && len(*subMenu) > 0 {
+				back := "back"
+				if selected.backOptionLabel != "" {
+					back = selected.backOptionLabel
+				}
+
+				if selected.SubMenuTitle != "" {
+					subMenuLabel = selected.SubMenuTitle
+				}
+				ShowMenu(subMenuLabel, subMenu, back)
 			}
-			ShowMenu(subMenuLabel, subMenu, back)
+
 		}
 
 		if selected.SelectedFunc != nil {
 			selectedFunc := selected.SelectedFunc
-			err := selectedFunc(&selected)
+			logger.Logger.Debugf("Run selectFunc %+v", selectedFunc)
+			err := selectedFunc(index, &selected)
 			if err != nil {
 				fmt.Printf("Gortal got an error %s\n", err)
 			}
