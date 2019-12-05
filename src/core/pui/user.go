@@ -131,3 +131,58 @@ func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Ses
 		return &menu
 	}
 }
+
+// ChangePassword ChangePassword
+func ChangePassword(username string, sess *ssh.Session) error {
+	fmt.Printf("GetChangePassword of user '%s'.", username)
+	var stdio ssh.Session
+	if sess != nil {
+		stdio = *sess
+	} else {
+		stdio = nil
+	}
+
+	user := (*config.Conf).GetUserByUsername(username)
+	if user == nil {
+		return errors.New(fmt.Sprintf("Username '%s' of user not existed. ", username))
+	}
+
+	passwdPui := promptui.Prompt{
+		Label: "Password",
+		Validate: func(input string) error {
+			if len(input) < 6 {
+				return errors.New("Password must have more than 6 characters")
+			}
+			return nil
+		},
+		Mask:   '*',
+		Stdin:  stdio,
+		Stdout: stdio,
+	}
+
+	passwd, err := passwdPui.Run()
+	if err != nil {
+		return err
+	}
+
+	confirmPasswdPui := promptui.Prompt{
+		Label: "Confirm your password",
+		Validate: func(input string) error {
+			if input != passwd {
+				return errors.New("Password not match")
+			}
+			return nil
+		},
+		Mask:   '*',
+		Stdin:  stdio,
+		Stdout: stdio,
+	}
+
+	_, err = confirmPasswdPui.Run()
+	if err != nil {
+		return err
+	}
+	// Todo Hash password
+	user.HashPasswd = passwd
+	return nil
+}

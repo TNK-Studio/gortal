@@ -77,10 +77,27 @@ func init() {
 							}
 							delete(*config.Conf.Users, userKey)
 							config.Conf.ReIndexUser()
-							config.Conf.SaveTo(*config.ConfPath)
+							err := config.Conf.SaveTo(*config.ConfPath)
+							if err != nil {
+								return err
+							}
 							return nil
 						},
 					),
+				},
+				MenuItem{
+					Label: "Change your password",
+					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session) error {
+						err := ChangePassword((*sess).User(), sess)
+						if err != nil {
+							return err
+						}
+						err = config.Conf.SaveTo(*config.ConfPath)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				},
 			}),
 		},
@@ -118,7 +135,10 @@ func init() {
 
 							delete(*config.Conf.Servers, serverKey)
 							config.Conf.ReIndexServer()
-							config.Conf.SaveTo(*config.ConfPath)
+							err := config.Conf.SaveTo(*config.ConfPath)
+							if err != nil {
+								return err
+							}
 							return nil
 						},
 					),
