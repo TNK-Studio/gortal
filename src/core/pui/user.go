@@ -6,10 +6,11 @@ import (
 
 	"github.com/TNK-Studio/gortal/src/config"
 	"github.com/elfgzp/promptui"
+	"github.com/gliderlabs/ssh"
 )
 
 // CreateUser new user
-func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, error) {
+func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string, *config.User, error) {
 	fmt.Println("Create a user.")
 	usernamePui := promptui.Prompt{
 		Label: "Username",
@@ -19,8 +20,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			}
 			return nil
 		},
-		Stdin:  Sess,
-		Stdout: Sess,
+		Stdin:  *sess,
+		Stdout: *sess,
 	}
 
 	username, err := usernamePui.Run()
@@ -37,8 +38,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			return nil
 		},
 		Mask:   '*',
-		Stdin:  Sess,
-		Stdout: Sess,
+		Stdin:  *sess,
+		Stdout: *sess,
 	}
 
 	passwd, err := passwdPui.Run()
@@ -55,8 +56,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 			return nil
 		},
 		Mask:   '*',
-		Stdin:  Sess,
-		Stdout: Sess,
+		Stdin:  *sess,
+		Stdout: *sess,
 	}
 
 	_, err = confirmPasswdPui.Run()
@@ -69,8 +70,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool) (*string, *config.User, erro
 		adminPui := promptui.Prompt{
 			Label:    "Is admin ? yes/no",
 			Validate: YesOrNo(),
-			Stdin:    Sess,
-			Stdout:   Sess,
+			Stdin:    *sess,
+			Stdout:   *sess,
 		}
 
 		IsAdminString, err = adminPui.Run()

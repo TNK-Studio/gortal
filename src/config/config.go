@@ -135,6 +135,16 @@ func (c *Config) AddServerSSHUser(serverKey string, username string, identityFil
 	return key, sshUser
 }
 
+// GetUserByUsername GetUserByUsername
+func (c *Config) GetUserByUsername(username string) *User {
+	for _, user := range *c.Users {
+		if user.Username == username {
+			return user
+		}
+	}
+	return nil
+}
+
 // GetUserServers get user servers list
 func (c *Config) GetUserServers(user *User) []Server {
 	servers := make([]Server, 0)

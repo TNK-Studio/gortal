@@ -8,19 +8,19 @@ import (
 
 	"github.com/TNK-Studio/gortal/src/config"
 	"github.com/TNK-Studio/gortal/src/core/sshd"
-	"github.com/TNK-Studio/gortal/src/core/state"
 	"github.com/TNK-Studio/gortal/src/utils"
 	"github.com/elfgzp/promptui"
+	"github.com/gliderlabs/ssh"
 )
 
 // AddServer add server to config
-func AddServer() (*string, *config.Server, error) {
+func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 	fmt.Println("Add a server.")
 	namePui := promptui.Prompt{
 		Label:    "Server name",
 		Validate: Required("server name"),
-		Stdin:    Sess,
-		Stdout:   Sess,
+		Stdin:    *sess,
+		Stdout:   *sess,
 	}
 
 	name, err := namePui.Run()
@@ -31,8 +31,8 @@ func AddServer() (*string, *config.Server, error) {
 	hostPui := promptui.Prompt{
 		Label:    "Server host",
 		Validate: Required("server host"),
-		Stdin:    Sess,
-		Stdout:   Sess,
+		Stdin:    *sess,
+		Stdout:   *sess,
 	}
 
 	host, err := hostPui.Run()
@@ -49,8 +49,8 @@ func AddServer() (*string, *config.Server, error) {
 			},
 		),
 		Default: "22",
-		Stdin:   Sess,
-		Stdout:  Sess,
+		Stdin:   *sess,
+		Stdout:  *sess,
 	}
 
 	portString, err := portPui.Run()
@@ -65,13 +65,13 @@ func AddServer() (*string, *config.Server, error) {
 }
 
 // AddServerSSHUser add server ssh user
-func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
+func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSHUser, error) {
 	fmt.Println("Add a server ssh user.")
 	usernamePui := promptui.Prompt{
 		Label:    "SSH username",
 		Validate: Required("SSH username"),
-		Stdin:    Sess,
-		Stdout:   Sess,
+		Stdin:    *sess,
+		Stdout:   *sess,
 	}
 
 	username, err := usernamePui.Run()
@@ -93,8 +93,8 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 				},
 			},
 		),
-		Stdin:  Sess,
-		Stdout: Sess,
+		Stdin:  *sess,
+		Stdout: *sess,
 	}
 
 	identityFile, err := identityFilePui.Run()
@@ -105,8 +105,8 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 	allowAllUserPui := promptui.Prompt{
 		Label:    "Allow all user access ? yes/no",
 		Validate: YesOrNo(),
-		Stdin:    Sess,
-		Stdout:   Sess,
+		Stdin:    *sess,
+		Stdout:   *sess,
 	}
 
 	allAllUser, err := allowAllUserPui.Run()
@@ -159,22 +159,23 @@ func AddServerSSHUser(serverKey string) (*string, *config.SSHUser, error) {
 }
 
 // GetServerSSHUsersMenu get server ssh users menu
-func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem) *[]MenuItem {
-	return func(index int, menuItem *MenuItem) *[]MenuItem {
+func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
 		menu := make([]MenuItem, 0)
-		sshUsers := (*config.Conf).GetServerSSHUsers(state.CurrentUser, server)
+		user := config.Conf.GetUserByUsername((*sess).User())
+		sshUsers := (*config.Conf).GetServerSSHUsers(user, server)
 		for _, sshUser := range sshUsers {
 			menu = append(
 				menu,
 				MenuItem{
 					Label: sshUser.SSHUsername,
-					SelectedFunc: func(int, *MenuItem) error {
+					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session) error {
 						err := sshd.Connect(
 							server.Host,
 							server.Port,
 							sshUser.SSHUsername,
 							sshUser.IdentityFile,
-							&Sess,
+							sess,
 						)
 						if err != nil {
 							return err
@@ -189,10 +190,11 @@ func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem) *[]MenuIt
 }
 
 // GetServersMenu get servers menu
-func GetServersMenu() func(int, *MenuItem) *[]MenuItem {
-	return func(index int, menuItem *MenuItem) *[]MenuItem {
+func GetServersMenu() func(int, *MenuItem, *ssh.Session) *[]MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
 		menu := make([]MenuItem, 0)
-		servers := (*config.Conf).GetUserServers(state.CurrentUser)
+		user := config.Conf.GetUserByUsername((*sess).User())
+		servers := (*config.Conf).GetUserServers(user)
 		for _, server := range servers {
 			menu = append(
 				menu,
