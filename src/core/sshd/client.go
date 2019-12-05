@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TNK-Studio/gortal/src/utils"
+	"github.com/fatih/color"
 	"github.com/gliderlabs/ssh"
 	sshclient "github.com/helloyi/go-sshclient"
 )
@@ -29,4 +30,10 @@ func Connect(host string, port int, username string, privKeyFile string, sess *s
 	}
 
 	return nil
+}
+
+// ErrorInfo ErrorInfo
+func ErrorInfo(err error, sess *ssh.Session) {
+	read := color.New(color.FgRed)
+	read.Fprint(*sess, fmt.Sprintf("%s\n", err))
 }

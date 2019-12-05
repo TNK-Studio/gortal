@@ -53,10 +53,11 @@ func init() {
 
 // MenuItem menu item
 type MenuItem struct {
-	Label           string
-	IsShow          func(int, *MenuItem, *ssh.Session) bool
-	SubMenuTitle    string
-	GetSubMenu      func(int, *MenuItem, *ssh.Session) *[]MenuItem
-	SelectedFunc    func(int, *MenuItem, *ssh.Session) error
-	backOptionLabel string
+	Label             string
+	IsShow            func(int, *MenuItem, *ssh.Session) bool
+	SubMenuTitle      string
+	GetSubMenu        func(int, *MenuItem, *ssh.Session) *[]MenuItem
+	SelectedFunc      func(int, *MenuItem, *ssh.Session) error
+	SkipIfOnlyOneItem bool
+	backOptionLabel   string
 }

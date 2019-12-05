@@ -21,6 +21,12 @@
 			"revisionTime": "2019-12-02T23:39:27Z"
 		},
 		{
+			"checksumSHA1": "BxH9xJUqczhpL57gfKZe2/VlBHY=",
+			"path": "github.com/fatih/color",
+			"revision": "3f9d52f7176a6927daacff70a3e8d1dc2025c53e",
+			"revisionTime": "2018-10-10T23:13:11Z"
+		},
+		{
 			"checksumSHA1": "08e5WsnO/DA2pYRqbyQF1ksOHIs=",
 			"path": "github.com/gliderlabs/ssh",
 			"revision": "59d6e4540dea33ecd8f90b12887906b7b081fbcd",
@@ -121,6 +127,13 @@
 			"path": "golang.org/x/crypto/ssh",
 			"revision": "b544559bb6d1b5c62fba4af5e843ff542174f079",
 			"revisionTime": "2019-11-28T06:18:39Z"
+		},
+		{
+			"checksumSHA1": "hEYaWw+8NP4vlt/idQaUfg3cWdM=",
+			"origin": "github.com/fatih/color/vendor/golang.org/x/sys/unix",
+			"path": "golang.org/x/sys/unix",
+			"revision": "3f9d52f7176a6927daacff70a3e8d1dc2025c53e",
+			"revisionTime": "2018-10-10T23:13:11Z"
 		},
 		{
 			"checksumSHA1": "mspriBK28mrdRiQNHoThnYEFaeQ=",
