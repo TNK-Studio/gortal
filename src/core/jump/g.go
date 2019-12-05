@@ -1,6 +1,7 @@
 package jump
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -36,21 +37,22 @@ func (jps *JumpService) Run(s *ssh.Session) {
 	jps.persionUI.ShowMainMenu()
 }
 
-func setupConfig() {
+func setupConfig() error {
 	fmt.Println("Config file not found. Setup config.", *config.ConfPath)
 	_, _, err := pui.CreateUser(false, true, nil)
 	if err != nil {
-		return
+		return err
 	}
 	serverKey, _, err := pui.AddServer(nil)
 	if err != nil {
-		return
+		return err
 	}
 	_, _, err = pui.AddServerSSHUser(*serverKey, nil)
 	if err != nil {
-		return
+		return err
 	}
 	config.Conf.SaveTo(*config.ConfPath)
+	return nil
 }
 
 // VarifyUser VarifyUser
@@ -67,21 +69,22 @@ func VarifyUser(ctx ssh.Context, pass string) bool {
 }
 
 // Configurate Configurate
-func Configurate() {
+func Configurate() error {
 	if *config.ConfPath == "" {
-		fmt.Println("Please specify a config file.")
-		return
+		return errors.New("Please specify a config file. ")
 	}
 	fmt.Println("Read config file", *config.ConfPath)
 	if !config.ConfigFileExisted(*config.ConfPath) {
-		setupConfig()
+		err := setupConfig()
+		return err
 	} else {
 		config.Conf.ReadFrom(*config.ConfPath)
 		if config.Conf.Users == nil || len(*config.Conf.Users) < 1 {
 			_, _, err := pui.CreateUser(false, true, nil)
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
+	return nil
 }

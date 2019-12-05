@@ -145,9 +145,14 @@ func (c *Config) GetUserByUsername(username string) *User {
 	return nil
 }
 
+// // GetUsers GetUsers
+// func (c *Config) GetUsers() []*User {
+
+// }
+
 // GetUserServers get user servers list
-func (c *Config) GetUserServers(user *User) []Server {
-	servers := make([]Server, 0)
+func (c *Config) GetUserServers(user *User) []*Server {
+	servers := make([]*Server, 0)
 	for _, server := range *c.Servers {
 	loop:
 		for _, sshUser := range *server.SSHUsers {
@@ -163,28 +168,52 @@ func (c *Config) GetUserServers(user *User) []Server {
 		}
 		servers = append(
 			servers,
-			*server,
+			server,
 		)
 	}
 	return servers
 }
 
 // GetServerSSHUsers get all allow server' s ssh users
-func (c *Config) GetServerSSHUsers(user *User, server *Server) []SSHUser {
-	sshUsers := make([]SSHUser, 0)
+func (c *Config) GetServerSSHUsers(user *User, server *Server) []*SSHUser {
+	sshUsers := make([]*SSHUser, 0)
 	for _, sshUser := range *server.SSHUsers {
 		if sshUser.AllowUsers == nil {
-			sshUsers = append(sshUsers, *sshUser)
+			sshUsers = append(sshUsers, sshUser)
 			continue
 		}
 
 		for _, username := range *sshUser.AllowUsers {
 			if user.Username == username {
-				sshUsers = append(sshUsers, *sshUser)
+				sshUsers = append(sshUsers, sshUser)
 			}
 		}
 	}
 	return sshUsers
+}
+
+// ReIndexUser ReIndexUser
+func (c *Config) ReIndexUser() {
+	users := make(map[string]*User, 0)
+	i := 1
+
+	for _, user := range *c.Users {
+		key := fmt.Sprintf("user%d", i)
+		users[key] = user
+	}
+	(*c).Users = &users
+}
+
+// ReIndexServer ReIndexServer
+func (c *Config) ReIndexServer() {
+	servers := make(map[string]*Server, 0)
+	i := 1
+
+	for _, server := range *c.Servers {
+		key := fmt.Sprintf("user%d", i)
+		servers[key] = server
+	}
+	(*c).Servers = &servers
 }
 
 // ConfigFileExisted check config file is existed

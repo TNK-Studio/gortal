@@ -3,6 +3,7 @@ package pui
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/TNK-Studio/gortal/src/config"
 	"github.com/elfgzp/promptui"
@@ -12,6 +13,12 @@ import (
 // CreateUser new user
 func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string, *config.User, error) {
 	fmt.Println("Create a user.")
+	var stdio ssh.Session
+	if sess != nil {
+		stdio = *sess
+	} else {
+		stdio = nil
+	}
 	usernamePui := promptui.Prompt{
 		Label: "Username",
 		Validate: MultiValidate([](func(string) error){
@@ -29,8 +36,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 				return nil
 			},
 		}),
-		Stdin:  *sess,
-		Stdout: *sess,
+		Stdin:  stdio,
+		Stdout: stdio,
 	}
 
 	username, err := usernamePui.Run()
@@ -47,8 +54,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 			return nil
 		},
 		Mask:   '*',
-		Stdin:  *sess,
-		Stdout: *sess,
+		Stdin:  stdio,
+		Stdout: stdio,
 	}
 
 	passwd, err := passwdPui.Run()
@@ -65,8 +72,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 			return nil
 		},
 		Mask:   '*',
-		Stdin:  *sess,
-		Stdout: *sess,
+		Stdin:  stdio,
+		Stdout: stdio,
 	}
 
 	_, err = confirmPasswdPui.Run()
@@ -79,8 +86,8 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 		adminPui := promptui.Prompt{
 			Label:    "Is admin ? yes/no",
 			Validate: YesOrNo(),
-			Stdin:    *sess,
-			Stdout:   *sess,
+			Stdin:    stdio,
+			Stdout:   stdio,
 		}
 
 		IsAdminString, err = adminPui.Run()
@@ -95,4 +102,32 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 	}
 	key, user := config.Conf.AddUser(username, passwd, isAdmin)
 	return &key, user, nil
+}
+
+// GetUsersMenu get users
+func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session) error) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
+		menu := make([]MenuItem, 0)
+		userKeys := make([]string, 0)
+		for userKey := range *config.Conf.Users {
+			userKeys = append(userKeys, userKey)
+		}
+		sort.Strings(userKeys)
+		if len(userKeys) < 1 {
+			return &menu
+		}
+		for _, userKey := range userKeys {
+			user := (*config.Conf.Users)[userKey]
+			menu = append(
+				menu,
+				MenuItem{
+					Label:             user.Username,
+					SubMenuTitle:      fmt.Sprintf("Please select. "),
+					SelectedFunc:      selectedFunc,
+					BackAfterSelected: true,
+				},
+			)
+		}
+		return &menu
+	}
 }

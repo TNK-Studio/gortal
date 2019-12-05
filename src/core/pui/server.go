@@ -3,6 +3,7 @@ package pui
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -16,11 +17,17 @@ import (
 // AddServer add server to config
 func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 	fmt.Println("Add a server.")
+	var stdio ssh.Session
+	if sess != nil {
+		stdio = *sess
+	} else {
+		stdio = nil
+	}
 	namePui := promptui.Prompt{
 		Label:    "Server name",
 		Validate: Required("server name"),
-		Stdin:    *sess,
-		Stdout:   *sess,
+		Stdin:    stdio,
+		Stdout:   stdio,
 	}
 
 	name, err := namePui.Run()
@@ -31,8 +38,8 @@ func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 	hostPui := promptui.Prompt{
 		Label:    "Server host",
 		Validate: Required("server host"),
-		Stdin:    *sess,
-		Stdout:   *sess,
+		Stdin:    stdio,
+		Stdout:   stdio,
 	}
 
 	host, err := hostPui.Run()
@@ -49,8 +56,8 @@ func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 			},
 		),
 		Default: "22",
-		Stdin:   *sess,
-		Stdout:  *sess,
+		Stdin:   stdio,
+		Stdout:  stdio,
 	}
 
 	portString, err := portPui.Run()
@@ -67,11 +74,17 @@ func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 // AddServerSSHUser add server ssh user
 func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSHUser, error) {
 	fmt.Println("Add a server ssh user.")
+	var stdio ssh.Session
+	if sess != nil {
+		stdio = *sess
+	} else {
+		stdio = nil
+	}
 	usernamePui := promptui.Prompt{
 		Label:    "SSH username",
 		Validate: Required("SSH username"),
-		Stdin:    *sess,
-		Stdout:   *sess,
+		Stdin:    stdio,
+		Stdout:   stdio,
 	}
 
 	username, err := usernamePui.Run()
@@ -93,8 +106,8 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 				},
 			},
 		),
-		Stdin:  *sess,
-		Stdout: *sess,
+		Stdin:  stdio,
+		Stdout: stdio,
 	}
 
 	identityFile, err := identityFilePui.Run()
@@ -105,8 +118,8 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 	allowAllUserPui := promptui.Prompt{
 		Label:    "Allow all user access ? yes/no",
 		Validate: YesOrNo(),
-		Stdin:    *sess,
-		Stdout:   *sess,
+		Stdin:    stdio,
+		Stdout:   stdio,
 	}
 
 	allAllUser, err := allowAllUserPui.Run()
@@ -201,7 +214,35 @@ func GetServersMenu() func(int, *MenuItem, *ssh.Session) *[]MenuItem {
 				MenuItem{
 					Label:        server.Name,
 					SubMenuTitle: fmt.Sprintf("Please select ssh user to login '%s'", server.Name),
-					GetSubMenu:   GetServerSSHUsersMenu(&server),
+					GetSubMenu:   GetServerSSHUsersMenu(server),
+				},
+			)
+		}
+		return &menu
+	}
+}
+
+// GetEditedServersMenu get servers menu
+func GetEditedServersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session) error) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
+		menu := make([]MenuItem, 0)
+		serverKeys := make([]string, 0)
+		for serverKey := range *config.Conf.Servers {
+			serverKeys = append(serverKeys, serverKey)
+		}
+		sort.Strings(serverKeys)
+		if len(serverKeys) < 1 {
+			return &menu
+		}
+		for _, serverKey := range serverKeys {
+			server := (*config.Conf.Servers)[serverKey]
+			menu = append(
+				menu,
+				MenuItem{
+					Label:             server.Name,
+					SubMenuTitle:      fmt.Sprintf("Please select. "),
+					SelectedFunc:      selectedFunc,
+					BackAfterSelected: true,
 				},
 			)
 		}

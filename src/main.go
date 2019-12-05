@@ -19,7 +19,12 @@ func init() {
 }
 func main() {
 	flag.Parse()
-	jump.Configurate()
+	err := jump.Configurate()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
 	ssh.Handle(func(s ssh.Session) {
 		jps := jump.JumpService{}
 		jps.Run(&s)

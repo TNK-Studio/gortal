@@ -20,7 +20,7 @@ func (ui *PUI) SetSession(s *ssh.Session) {
 }
 
 // ShowMenu show menu
-func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) {
+func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, BackOptionLabel string) {
 	for {
 		menuLabels := make([]string, 0)
 		menuItems := make([]MenuItem, 0)
@@ -37,7 +37,7 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 		}
 		logger.Logger.Debugf("Show menu %s", menuItems)
 
-		menuLabels = append(menuLabels, backOptionLabel)
+		menuLabels = append(menuLabels, BackOptionLabel)
 		backIndex := len(menuLabels) - 1
 		menuPui := promptui.Select{
 			Label:  label,
@@ -68,8 +68,8 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 
 			if subMenu != nil && len(*subMenu) > 0 {
 				back := "back"
-				if selected.backOptionLabel != "" {
-					back = selected.backOptionLabel
+				if selected.BackOptionLabel != "" {
+					back = selected.BackOptionLabel
 				}
 
 				if selected.SubMenuTitle != "" {
@@ -86,6 +86,9 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 			if err != nil {
 				logger.Logger.Errorf("Run selected func err: %s", err)
 				sshd.ErrorInfo(err, ui.sess)
+			}
+			if selected.BackAfterSelected == true {
+				return
 			}
 		}
 	}
