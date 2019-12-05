@@ -6,16 +6,20 @@ import (
 	"log"
 
 	"github.com/TNK-Studio/gortal/src/core/jump"
+	"github.com/TNK-Studio/gortal/src/utils"
 	"github.com/gliderlabs/ssh"
 )
 
 var (
 	// Port port
 	Port *int
+
+	hostKeyFile *string
 )
 
 func init() {
 	Port = flag.Int("p", 2222, "Port")
+	hostKeyFile = flag.String("hk", "~/.ssh/id_rsa", "Host key file")
 }
 func main() {
 	flag.Parse()
@@ -37,6 +41,7 @@ func main() {
 		ssh.PasswordAuth(func(ctx ssh.Context, pass string) bool {
 			return jump.VarifyUser(ctx, pass)
 		}),
+		ssh.HostKeyFile(utils.FilePath(*hostKeyFile)),
 	),
 	)
 }
