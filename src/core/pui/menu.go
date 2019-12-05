@@ -21,6 +21,16 @@ func staticSubMenu(subMenu *[]MenuItem) func(int, *MenuItem, *ssh.Session) *[]Me
 	}
 }
 
+// MenuItem menu item
+type MenuItem struct {
+	Label           string
+	IsShow          func(int, *MenuItem, *ssh.Session) bool
+	SubMenuTitle    string
+	GetSubMenu      func(int, *MenuItem, *ssh.Session) *[]MenuItem
+	SelectedFunc    func(int, *MenuItem, *ssh.Session) error
+	backOptionLabel string
+}
+
 func init() {
 	MainMenu = &[]MenuItem{
 		MenuItem{
@@ -34,6 +44,17 @@ func init() {
 			GetSubMenu: staticSubMenu(&[]MenuItem{
 				MenuItem{
 					Label: "Add user",
+					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session) error {
+						_, _, err := CreateUser(isAdmin(index, menuItem, sess), false, sess)
+						if err != nil {
+							return err
+						}
+						err = config.Conf.SaveTo(*config.ConfPath)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				},
 				MenuItem{Label: "Edit user info"},
 				MenuItem{Label: "Delete user"},
@@ -49,15 +70,4 @@ func init() {
 			}),
 		},
 	}
-}
-
-// MenuItem menu item
-type MenuItem struct {
-	Label             string
-	IsShow            func(int, *MenuItem, *ssh.Session) bool
-	SubMenuTitle      string
-	GetSubMenu        func(int, *MenuItem, *ssh.Session) *[]MenuItem
-	SelectedFunc      func(int, *MenuItem, *ssh.Session) error
-	SkipIfOnlyOneItem bool
-	backOptionLabel   string
 }

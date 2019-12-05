@@ -14,12 +14,21 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 	fmt.Println("Create a user.")
 	usernamePui := promptui.Prompt{
 		Label: "Username",
-		Validate: func(input string) error {
-			if len(input) < 3 {
-				return errors.New("Username must have more than 3 characters")
-			}
-			return nil
-		},
+		Validate: MultiValidate([](func(string) error){
+			func(input string) error {
+				if len(input) < 3 {
+					return errors.New("Username must have more than 3 characters")
+				}
+				return nil
+			},
+			func(input string) error {
+				user := config.Conf.GetUserByUsername(input)
+				if user != nil {
+					return errors.New(fmt.Sprintf("Username '%s' of user is existed", input))
+				}
+				return nil
+			},
+		}),
 		Stdin:  *sess,
 		Stdout: *sess,
 	}

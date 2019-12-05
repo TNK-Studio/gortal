@@ -37,38 +37,27 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 		}
 		logger.Logger.Debugf("Show menu %s", menuItems)
 
-		var index int
-		var subMenuLabel string
-		var selected *MenuItem
-
-		if len(menuItems) == 1 && menuItems[0].SkipIfOnlyOneItem == true {
-			logger.Logger.Debugf("Menu '%+v' only has on item, skip.", menuItems)
-			index = 0
-			subMenuLabel = menuLabels[index]
-			selected = &menuItems[0]
-		} else {
-			menuLabels = append(menuLabels, backOptionLabel)
-			backIndex := len(menuLabels) - 1
-			menuPui := promptui.Select{
-				Label:  label,
-				Items:  menuLabels,
-				Stdin:  *ui.sess,
-				Stdout: *ui.sess,
-			}
-
-			index, subMenuLabel, err := menuPui.Run()
-
-			logger.Logger.Debugf("Selected index: %d subMenuLabel: %+v err: %s", index, subMenuLabel, err)
-			if err != nil {
-				fmt.Printf("Select menu error %s\n", err)
-				return
-			}
-
-			if index == backIndex {
-				return
-			}
-			selected = &(menuItems[index])
+		menuLabels = append(menuLabels, backOptionLabel)
+		backIndex := len(menuLabels) - 1
+		menuPui := promptui.Select{
+			Label:  label,
+			Items:  menuLabels,
+			Stdin:  *ui.sess,
+			Stdout: *ui.sess,
 		}
+
+		index, subMenuLabel, err := menuPui.Run()
+
+		logger.Logger.Debugf("Selected index: %d subMenuLabel: %+v err: %s", index, subMenuLabel, err)
+		if err != nil {
+			fmt.Printf("Select menu error %s\n", err)
+			return
+		}
+
+		if index == backIndex {
+			break
+		}
+		selected := &(menuItems[index])
 
 		logger.Logger.Debugf("Selected: %+v", selected)
 
@@ -88,7 +77,6 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 				}
 				ui.ShowMenu(subMenuLabel, subMenu, back)
 			}
-
 		}
 
 		if selected.SelectedFunc != nil {
@@ -98,7 +86,6 @@ func (ui *PUI) ShowMenu(label string, menu *[]MenuItem, backOptionLabel string) 
 			if err != nil {
 				logger.Logger.Errorf("Run selected func err: %s", err)
 				sshd.ErrorInfo(err, ui.sess)
-				return
 			}
 		}
 	}

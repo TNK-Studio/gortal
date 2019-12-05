@@ -27,6 +27,9 @@ func (jps *JumpService) setSession(sess *ssh.Session) {
 
 // Run jump
 func (jps *JumpService) Run(s *ssh.Session) {
+	defer func() {
+		(*jps.sess).Exit(0)
+	}()
 	jps.setSession(s)
 	jps.persionUI = &pui.PUI{}
 	jps.persionUI.SetSession(jps.sess)

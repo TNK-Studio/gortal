@@ -182,7 +182,6 @@ func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Sess
 						}
 						return nil
 					},
-					SkipIfOnlyOneItem: true,
 				},
 			)
 		}
