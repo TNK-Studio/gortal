@@ -10,3 +10,13 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Custom
+bin/
+.vscode/
+.idea/
+.history/
+debug
+__debug_bin
+vendor/*
+!vendor/vendor.json
