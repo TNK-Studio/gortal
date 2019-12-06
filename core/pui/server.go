@@ -10,19 +10,15 @@ import (
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/sshd"
 	"github.com/TNK-Studio/gortal/utils"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
 	"github.com/gliderlabs/ssh"
 )
 
 // AddServer add server to config
 func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
-	fmt.Println("Add a server.")
-	var stdio ssh.Session
-	if sess != nil {
-		stdio = *sess
-	} else {
-		stdio = nil
-	}
+	logger.Logger.Info("Add a server.")
+	stdio := utils.SessIO(sess)
 	namePui := promptui.Prompt{
 		Label:    "Server name",
 		Validate: Required("server name"),
@@ -71,15 +67,68 @@ func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 	return &key, server, nil
 }
 
+// EditServer EditServer
+func EditServer(server *config.Server, sess *ssh.Session) (*config.Server, error) {
+	stdio := utils.SessIO(sess)
+	namePui := promptui.Prompt{
+		Label:    "Server name",
+		Validate: Required("server name"),
+		Default:  server.Name,
+		Stdin:    stdio,
+		Stdout:   stdio,
+	}
+
+	name, err := namePui.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	hostPui := promptui.Prompt{
+		Label:    "Server host",
+		Validate: Required("server host"),
+		Default:  server.Host,
+		Stdin:    stdio,
+		Stdout:   stdio,
+	}
+
+	host, err := hostPui.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	portPui := promptui.Prompt{
+		Label: "Server port",
+		Validate: MultiValidate(
+			[](func(string) error){
+				Required("server port"),
+				IsInt(),
+			},
+		),
+		Default: fmt.Sprintf("%d", server.Port),
+		Stdin:   stdio,
+		Stdout:  stdio,
+	}
+
+	portString, err := portPui.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	port, _ := strconv.Atoi(portString)
+
+	newServer := &config.Server{
+		Name:     name,
+		Host:     host,
+		Port:     port,
+		SSHUsers: (*server).SSHUsers,
+	}
+	return newServer, nil
+}
+
 // AddServerSSHUser add server ssh user
 func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSHUser, error) {
-	fmt.Println("Add a server ssh user.")
-	var stdio ssh.Session
-	if sess != nil {
-		stdio = *sess
-	} else {
-		stdio = nil
-	}
+	logger.Logger.Info("Add a server ssh user.")
+	stdio := utils.SessIO(sess)
 	usernamePui := promptui.Prompt{
 		Label:    "SSH username",
 		Validate: Required("SSH username"),
@@ -100,7 +149,7 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 				func(input string) error {
 					input = utils.FilePath(input)
 					if !config.ConfigFileExisted(input) {
-						return errors.New(fmt.Sprintf("Identity file '%s' not existed", input))
+						return fmt.Errorf("Identity file '%s' not existed", input)
 					}
 					return nil
 				},
@@ -141,11 +190,10 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 								if username == each {
 									break
 								}
-								return errors.New(fmt.Sprintf(
-									"Username '%s' of user not existed. Please choose from %v.",
+								return fmt.Errorf(
+									"Username '%s' of user not existed. Please choose from %v. ",
 									username,
 									userList,
-								),
 								)
 							}
 						}
@@ -172,17 +220,20 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 }
 
 // GetServerSSHUsersMenu get server ssh users menu
-func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
-	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
-		menu := make([]MenuItem, 0)
+func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) *[]*MenuItem {
+		menu := make([]*MenuItem, 0)
 		user := config.Conf.GetUserByUsername((*sess).User())
 		sshUsers := (*config.Conf).GetServerSSHUsers(user, server)
-		for _, sshUser := range sshUsers {
+		for sshUserKey, sshUser := range sshUsers {
+			info := make(map[string]string)
+			info[sshUserInfoKey] = sshUserKey
 			menu = append(
 				menu,
-				MenuItem{
+				&MenuItem{
 					Label: sshUser.SSHUsername,
-					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session) error {
+					Info:  info,
+					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
 						err := sshd.Connect(
 							server.Host,
 							server.Port,
@@ -203,16 +254,19 @@ func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Sess
 }
 
 // GetServersMenu get servers menu
-func GetServersMenu() func(int, *MenuItem, *ssh.Session) *[]MenuItem {
-	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
-		menu := make([]MenuItem, 0)
+func GetServersMenu() func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) *[]*MenuItem {
+		menu := make([]*MenuItem, 0)
 		user := config.Conf.GetUserByUsername((*sess).User())
 		servers := (*config.Conf).GetUserServers(user)
-		for _, server := range servers {
+		for serverKey, server := range servers {
+			info := make(map[string]string, 0)
+			info[serverInfoKey] = serverKey
 			menu = append(
 				menu,
-				MenuItem{
+				&MenuItem{
 					Label:        server.Name,
+					Info:         info,
 					SubMenuTitle: fmt.Sprintf("Please select ssh user to login '%s'", server.Name),
 					GetSubMenu:   GetServerSSHUsersMenu(server),
 				},
@@ -223,9 +277,12 @@ func GetServersMenu() func(int, *MenuItem, *ssh.Session) *[]MenuItem {
 }
 
 // GetEditedServersMenu get servers menu
-func GetEditedServersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session) error) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
-	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
-		menu := make([]MenuItem, 0)
+func GetEditedServersMenu(
+	getSubMenu func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuItem,
+	selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error,
+) func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) *[]*MenuItem {
+		menu := make([]*MenuItem, 0)
 		serverKeys := make([]string, 0)
 		for serverKey := range *config.Conf.Servers {
 			serverKeys = append(serverKeys, serverKey)
@@ -236,11 +293,16 @@ func GetEditedServersMenu(selectedFunc func(index int, menuItem *MenuItem, sess 
 		}
 		for _, serverKey := range serverKeys {
 			server := (*config.Conf.Servers)[serverKey]
+			info := make(map[string]string)
+			info[serverInfoKey] = serverKey
+
 			menu = append(
 				menu,
-				MenuItem{
+				&MenuItem{
 					Label:             server.Name,
+					Info:              info,
 					SubMenuTitle:      fmt.Sprintf("Please select. "),
+					GetSubMenu:        getSubMenu,
 					SelectedFunc:      selectedFunc,
 					BackAfterSelected: true,
 				},
@@ -248,4 +310,175 @@ func GetEditedServersMenu(selectedFunc func(index int, menuItem *MenuItem, sess 
 		}
 		return &menu
 	}
+}
+
+// EditSSHUser EditSSHUser
+func EditSSHUser(sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, error) {
+	logger.Logger.Info("Delete ssh user")
+	stdio := utils.SessIO(sess)
+	usernamePui := promptui.Prompt{
+		Label:    "SSH username",
+		Validate: Required("SSH username"),
+		Default:  sshUser.SSHUsername,
+		Stdin:    stdio,
+		Stdout:   stdio,
+	}
+
+	username, err := usernamePui.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	identityFilePui := promptui.Prompt{
+		Label: "Identity file",
+		Validate: MultiValidate(
+			[](func(string) error){
+				Required("identity file path"),
+				func(input string) error {
+					input = utils.FilePath(input)
+					if !config.ConfigFileExisted(input) {
+						return fmt.Errorf("Identity file '%s' not existed", input)
+					}
+					return nil
+				},
+			},
+		),
+		Default: sshUser.IdentityFile,
+		Stdin:   stdio,
+		Stdout:  stdio,
+	}
+
+	identityFile, err := identityFilePui.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	allowAllUserPui := promptui.Prompt{
+		Label:    "Allow all user access ? yes/no",
+		Validate: YesOrNo(),
+		Default:  utils.If(len(*sshUser.AllowUsers) > 0, "no", "yes").(string),
+		Stdin:    stdio,
+		Stdout:   stdio,
+	}
+
+	allAllUser, err := allowAllUserPui.Run()
+	allowUsersString := ""
+	if allAllUser == "no" {
+		allowUsersPui := promptui.Prompt{
+			Label:   "Please enter all usernames separated by ','",
+			Default: strings.Join(*sshUser.AllowUsers, ","),
+			Validate: MultiValidate(
+				[](func(string) error){
+					Required("usernames"),
+					func(input string) error {
+						allowUsers := strings.Split(input, ",")
+						userList := make([]string, 0)
+						for _, user := range *(config.Conf.Users) {
+							userList = append(userList, user.Username)
+						}
+						for _, username := range allowUsers {
+							for _, each := range userList {
+								if username == each {
+									break
+								}
+								return fmt.Errorf(
+									"Username '%s' of user not existed. Please choose from %v. ",
+									username,
+									userList,
+								)
+							}
+						}
+						return nil
+					},
+				},
+			),
+		}
+
+		allowUsersString, err = allowUsersPui.Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var allowUsers *[]string
+	allowUsers = nil
+	if allowUsersString != "" {
+		splitedUser := strings.Split(allowUsersString, ",")
+		allowUsers = &splitedUser
+	}
+
+	newSSHUser := &config.SSHUser{
+		SSHUsername:  username,
+		IdentityFile: identityFile,
+		AllowUsers:   allowUsers,
+	}
+
+	return newSSHUser, nil
+}
+
+// DelSSHUser DelSSHUser
+func DelSSHUser(server *config.Server, sshUserKey string, sess *ssh.Session) error {
+	if (len(*server.SSHUsers)) <= 1 {
+		return errors.New("The server requires at least one ssh user. ")
+	}
+	if sshUser := (*server.SSHUsers)[sshUserKey]; sshUser != nil {
+		delete(*server.SSHUsers, sshUserKey)
+	} else {
+		return fmt.Errorf("SSH user of key '%s' does not exited. ", sshUserKey)
+	}
+	return nil
+}
+
+// GetEditedSSHUsersMenu GetEditedSSHUsersMenu
+func GetEditedSSHUsersMenu(server *config.Server) *[]*MenuItem {
+	menu := make([]*MenuItem, 0)
+
+	for sshUserKey, sshUser := range *server.SSHUsers {
+		info := make(map[string]string)
+		info[sshUserInfoKey] = sshUserKey
+		menu = append(
+			menu,
+			&MenuItem{
+				Label: sshUser.SSHUsername,
+				Info:  info,
+				GetSubMenu: staticSubMenu(&[]*MenuItem{
+					&MenuItem{
+						Label: "Edit ssh user",
+						SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
+							parent := selectedChain[len(selectedChain)-1]
+							sshUserKey := parent.Info[sshUserInfoKey]
+							sshUser := (*server.SSHUsers)[sshUserKey]
+							newSSHUser, err := EditSSHUser(sshUser, sess)
+							if err != nil {
+								return err
+							}
+							(*server.SSHUsers)[sshUserKey] = newSSHUser
+							err = config.Conf.SaveTo(*config.ConfPath)
+							if err != nil {
+								return err
+							}
+							return nil
+						},
+					},
+					&MenuItem{
+						Label: "Delete ssh user",
+						SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
+							parent := selectedChain[len(selectedChain)-1]
+							sshUserKey := parent.Info[sshUserInfoKey]
+							err := DelSSHUser(server, sshUserKey, sess)
+							if err != nil {
+								return err
+							}
+							err = config.Conf.SaveTo(*config.ConfPath)
+							if err != nil {
+								return err
+							}
+							return nil
+						},
+					},
+				}),
+			},
+		)
+	}
+	return &menu
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/TNK-Studio/gortal/core/jump"
 	"github.com/TNK-Studio/gortal/utils"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
 )
 
@@ -25,7 +26,7 @@ func main() {
 	flag.Parse()
 	err := jump.Configurate()
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		logger.Logger.Infof("%s\n", err)
 		return
 	}
 
