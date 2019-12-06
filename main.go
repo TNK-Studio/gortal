@@ -3,12 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
-
 	"github.com/TNK-Studio/gortal/core/jump"
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
+	"log"
 )
 
 var (

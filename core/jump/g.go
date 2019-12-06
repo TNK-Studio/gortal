@@ -8,6 +8,7 @@ import (
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/pui"
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
 )
@@ -74,7 +75,7 @@ func Configurate() error {
 		return errors.New("Please specify a config file. ")
 	}
 	logger.Logger.Info("Read config file", *config.ConfPath)
-	if !config.ConfigFileExisted(*config.ConfPath) {
+	if !utils.FileExited(*config.ConfPath) {
 		err := setupConfig()
 		return err
 	} else {

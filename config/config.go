@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"gopkg.in/yaml.v2"
@@ -212,13 +211,4 @@ func (c *Config) ReIndexServer() {
 		servers[key] = server
 	}
 	(*c).Servers = &servers
-}
-
-// ConfigFileExisted check config file is existed
-func ConfigFileExisted(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }

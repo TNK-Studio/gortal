@@ -8,8 +8,9 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/gliderlabs/ssh v0.2.2
 	github.com/helloyi/go-sshclient v0.0.0-20191203124208-f1e205501005
+	github.com/kr/pty v1.1.1
 	github.com/manifoldco/promptui v0.6.0 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd // indirect
+	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
 	gopkg.in/yaml.v2 v2.2.2
 )
