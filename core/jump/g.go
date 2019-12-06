@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/TNK-Studio/gortal/src/config"
-	"github.com/TNK-Studio/gortal/src/core/pui"
-	"github.com/TNK-Studio/gortal/src/utils/logger"
+	"github.com/TNK-Studio/gortal/config"
+	"github.com/TNK-Studio/gortal/core/pui"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
 )
 

@@ -3,8 +3,8 @@ package pui
 import (
 	"fmt"
 
-	"github.com/TNK-Studio/gortal/src/core/sshd"
-	"github.com/TNK-Studio/gortal/src/utils/logger"
+	"github.com/TNK-Studio/gortal/core/sshd"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
 	"github.com/gliderlabs/ssh"
 )

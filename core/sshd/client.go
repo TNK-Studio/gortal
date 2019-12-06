@@ -3,7 +3,7 @@ package sshd
 import (
 	"fmt"
 
-	"github.com/TNK-Studio/gortal/src/utils"
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/fatih/color"
 	"github.com/gliderlabs/ssh"
 	sshclient "github.com/helloyi/go-sshclient"

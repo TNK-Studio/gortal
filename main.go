@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/TNK-Studio/gortal/src/core/jump"
-	"github.com/TNK-Studio/gortal/src/utils"
+	"github.com/TNK-Studio/gortal/core/jump"
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/gliderlabs/ssh"
 )
 
