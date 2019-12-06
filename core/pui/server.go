@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TNK-Studio/gortal/src/config"
-	"github.com/TNK-Studio/gortal/src/core/sshd"
-	"github.com/TNK-Studio/gortal/src/utils"
+	"github.com/TNK-Studio/gortal/config"
+	"github.com/TNK-Studio/gortal/core/sshd"
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/elfgzp/promptui"
 	"github.com/gliderlabs/ssh"
 )

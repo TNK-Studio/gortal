@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/TNK-Studio/gortal/src/config"
+	"github.com/TNK-Studio/gortal/config"
 	"github.com/elfgzp/promptui"
 	"github.com/gliderlabs/ssh"
 )

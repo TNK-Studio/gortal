@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/TNK-Studio/gortal/src/config"
+	"github.com/TNK-Studio/gortal/config"
 	"github.com/gliderlabs/ssh"
 )
 
