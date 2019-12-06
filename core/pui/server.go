@@ -3,6 +3,7 @@ package pui
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,42 +20,21 @@ import (
 func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 	logger.Logger.Info("Add a server.")
 	stdio := utils.SessIO(sess)
-	namePui := promptui.Prompt{
-		Label:    "Server name",
-		Validate: Required("server name"),
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	namePui := serverNamePrompt("", stdio)
 
 	name, err := namePui.Run()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	hostPui := promptui.Prompt{
-		Label:    "Server host",
-		Validate: Required("server host"),
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	hostPui := serverHostPrompt("", stdio)
 
 	host, err := hostPui.Run()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	portPui := promptui.Prompt{
-		Label: "Server port",
-		Validate: MultiValidate(
-			[](func(string) error){
-				Required("server port"),
-				IsInt(),
-			},
-		),
-		Default: "22",
-		Stdin:   stdio,
-		Stdout:  stdio,
-	}
+	portPui := serverPortPrompt("22", stdio)
 
 	portString, err := portPui.Run()
 	if err != nil {
@@ -70,44 +50,21 @@ func AddServer(sess *ssh.Session) (*string, *config.Server, error) {
 // EditServer EditServer
 func EditServer(server *config.Server, sess *ssh.Session) (*config.Server, error) {
 	stdio := utils.SessIO(sess)
-	namePui := promptui.Prompt{
-		Label:    "Server name",
-		Validate: Required("server name"),
-		Default:  server.Name,
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	namePui := serverNamePrompt(server.Name, stdio)
 
 	name, err := namePui.Run()
 	if err != nil {
 		return nil, err
 	}
 
-	hostPui := promptui.Prompt{
-		Label:    "Server host",
-		Validate: Required("server host"),
-		Default:  server.Host,
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	hostPui := serverHostPrompt(server.Host, stdio)
 
 	host, err := hostPui.Run()
 	if err != nil {
 		return nil, err
 	}
 
-	portPui := promptui.Prompt{
-		Label: "Server port",
-		Validate: MultiValidate(
-			[](func(string) error){
-				Required("server port"),
-				IsInt(),
-			},
-		),
-		Default: fmt.Sprintf("%d", server.Port),
-		Stdin:   stdio,
-		Stdout:  stdio,
-	}
+	portPui := serverPortPrompt(fmt.Sprintf("%d", server.Port), stdio)
 
 	portString, err := portPui.Run()
 	if err != nil {
@@ -129,11 +86,10 @@ func EditServer(server *config.Server, sess *ssh.Session) (*config.Server, error
 func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSHUser, error) {
 	logger.Logger.Info("Add a server ssh user.")
 	stdio := utils.SessIO(sess)
-	usernamePui := promptui.Prompt{
-		Label:    "SSH username",
-		Validate: Required("SSH username"),
-		Stdin:    stdio,
-		Stdout:   stdio,
+	usernamePui := sshUserNamePrompt("", stdio)
+	server := (*config.Conf.Servers)[serverKey]
+	if server == nil {
+		return nil, nil, fmt.Errorf("Server of server key '%s' not existed. ", serverKey)
 	}
 
 	username, err := usernamePui.Run()
@@ -141,69 +97,109 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 		return nil, nil, err
 	}
 
-	identityFilePui := promptui.Prompt{
-		Label: "Identity file",
-		Validate: MultiValidate(
-			[](func(string) error){
-				Required("identity file path"),
-				func(input string) error {
-					input = utils.FilePath(input)
-					if !config.ConfigFileExisted(input) {
-						return fmt.Errorf("Identity file '%s' not existed", input)
-					}
-					return nil
-				},
-			},
-		),
-		Stdin:  stdio,
-		Stdout: stdio,
-	}
-
-	identityFile, err := identityFilePui.Run()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	allowAllUserPui := promptui.Prompt{
-		Label:    "Allow all user access ? yes/no",
+	hasIdentityFilePui := promptui.Prompt{
+		Label:    "Has identity file ? yes/no",
 		Validate: YesOrNo(),
 		Stdin:    stdio,
 		Stdout:   stdio,
 	}
 
-	allAllUser, err := allowAllUserPui.Run()
-	allowUsersString := ""
-	if allAllUser == "no" {
-		allowUsersPui := promptui.Prompt{
-			Label: "Please enter all usernames separated by ','",
-			Validate: MultiValidate(
-				[](func(string) error){
-					Required("usernames"),
-					func(input string) error {
-						allowUsers := strings.Split(input, ",")
-						userList := make([]string, 0)
-						for _, user := range *(config.Conf.Users) {
-							userList = append(userList, user.Username)
-						}
-						for _, username := range allowUsers {
-							for _, each := range userList {
-								if username == each {
-									break
-								}
-								return fmt.Errorf(
-									"Username '%s' of user not existed. Please choose from %v. ",
-									username,
-									userList,
-								)
-							}
-						}
-						return nil
-					},
-				},
-			),
-		}
+	hasIdentityFile, err := hasIdentityFilePui.Run()
+	if err != nil {
+		return nil, nil, err
+	}
 
-		allowUsersString, err = allowUsersPui.Run()
+	var identityFile string
+	var identityFilePui promptui.Prompt
+	if hasIdentityFile == "yes" {
+		identityFilePui = identityFilePrompt("", stdio, FileExited("Identity File"))
+
+		identityFile, err = identityFilePui.Run()
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		identityFilePui = identityFilePrompt(
+			"",
+			stdio,
+			FileNotExited("Identity File"),
+			IsNotDir(),
+			func(input string) error {
+				var file *os.File
+				fileName := utils.FilePath(input)
+
+				defer func() {
+					if file != nil {
+						file.Close()
+					}
+
+					if utils.FileExited(fileName) {
+						err = os.Remove(fileName)
+						if err != nil {
+							logger.Logger.Error(err)
+						}
+					}
+				}()
+
+				file, err = os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0666)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+		)
+		identityFile, err = identityFilePui.Run()
+		if err != nil {
+			return nil, nil, err
+		}
+		_, pubKeyFile, err := sshd.GenKey(identityFile)
+		if err != nil {
+			return nil, nil, err
+		}
+		times := 0
+		for {
+			if times > 2 {
+				return nil, nil, errors.New("Failed to copy public key to the server. ")
+			}
+			serverPasswdPui := promptui.Prompt{
+				Label:  "Server password (use to send your public key to the server). ",
+				Mask:   '*',
+				Stdin:  stdio,
+				Stdout: stdio,
+			}
+
+			serverPasswd, err := serverPasswdPui.Run()
+			if err != nil {
+				sshd.ErrorInfo(err, sess)
+				times++
+				continue
+			}
+
+			err = sshd.CopyID(
+				username,
+				server.Host,
+				server.Port,
+				serverPasswd,
+				pubKeyFile,
+			)
+			if err != nil {
+				sshd.ErrorInfo(err, sess)
+				times++
+				continue
+			}
+
+			break
+		}
+	}
+
+	allowAllUserPui := allowAllUserPrompt("", stdio)
+
+	allAllUser, err := allowAllUserPui.Run()
+	allowUsersStr := ""
+	if allAllUser == "no" {
+		allowUsersPui := allowUsersPrompt("", stdio)
+
+		allowUsersStr, err = allowUsersPui.Run()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -211,8 +207,8 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 
 	var allowUsers *[]string
 	allowUsers = nil
-	if allowUsersString != "" {
-		splitedUser := strings.Split(allowUsersString, ",")
+	if allowUsersStr != "" {
+		splitedUser := strings.Split(allowUsersStr, ",")
 		allowUsers = &splitedUser
 	}
 	key, sshUser := config.Conf.AddServerSSHUser(serverKey, username, identityFile, allowUsers)
@@ -316,85 +312,30 @@ func GetEditedServersMenu(
 func EditSSHUser(sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, error) {
 	logger.Logger.Info("Delete ssh user")
 	stdio := utils.SessIO(sess)
-	usernamePui := promptui.Prompt{
-		Label:    "SSH username",
-		Validate: Required("SSH username"),
-		Default:  sshUser.SSHUsername,
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	usernamePui := sshUserNamePrompt(sshUser.SSHUsername, stdio)
 
 	username, err := usernamePui.Run()
 	if err != nil {
 		return nil, err
 	}
 
-	identityFilePui := promptui.Prompt{
-		Label: "Identity file",
-		Validate: MultiValidate(
-			[](func(string) error){
-				Required("identity file path"),
-				func(input string) error {
-					input = utils.FilePath(input)
-					if !config.ConfigFileExisted(input) {
-						return fmt.Errorf("Identity file '%s' not existed", input)
-					}
-					return nil
-				},
-			},
-		),
-		Default: sshUser.IdentityFile,
-		Stdin:   stdio,
-		Stdout:  stdio,
-	}
+	identityFilePui := identityFilePrompt(sshUser.IdentityFile, stdio, FileExited("Identity File"))
 
 	identityFile, err := identityFilePui.Run()
 	if err != nil {
 		return nil, err
 	}
 
-	allowAllUserPui := promptui.Prompt{
-		Label:    "Allow all user access ? yes/no",
-		Validate: YesOrNo(),
-		Default:  utils.If(len(*sshUser.AllowUsers) > 0, "no", "yes").(string),
-		Stdin:    stdio,
-		Stdout:   stdio,
-	}
+	allowAllUserPui := allowAllUserPrompt(
+		utils.If(len(*sshUser.AllowUsers) > 0, "no", "yes").(string),
+		stdio,
+	)
 
 	allAllUser, err := allowAllUserPui.Run()
-	allowUsersString := ""
+	allowUsersStr := ""
 	if allAllUser == "no" {
-		allowUsersPui := promptui.Prompt{
-			Label:   "Please enter all usernames separated by ','",
-			Default: strings.Join(*sshUser.AllowUsers, ","),
-			Validate: MultiValidate(
-				[](func(string) error){
-					Required("usernames"),
-					func(input string) error {
-						allowUsers := strings.Split(input, ",")
-						userList := make([]string, 0)
-						for _, user := range *(config.Conf.Users) {
-							userList = append(userList, user.Username)
-						}
-						for _, username := range allowUsers {
-							for _, each := range userList {
-								if username == each {
-									break
-								}
-								return fmt.Errorf(
-									"Username '%s' of user not existed. Please choose from %v. ",
-									username,
-									userList,
-								)
-							}
-						}
-						return nil
-					},
-				},
-			),
-		}
-
-		allowUsersString, err = allowUsersPui.Run()
+		allowUsersPui := allowUsersPrompt(strings.Join(*sshUser.AllowUsers, ","), stdio)
+		allowUsersStr, err = allowUsersPui.Run()
 		if err != nil {
 			return nil, err
 		}
@@ -402,8 +343,8 @@ func EditSSHUser(sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, e
 
 	var allowUsers *[]string
 	allowUsers = nil
-	if allowUsersString != "" {
-		splitedUser := strings.Split(allowUsersString, ",")
+	if allowUsersStr != "" {
+		splitedUser := strings.Split(allowUsersStr, ",")
 		allowUsers = &splitedUser
 	}
 
