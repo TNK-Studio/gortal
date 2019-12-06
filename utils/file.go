@@ -13,7 +13,7 @@ func FilePath(path string) string {
 
 // FileExited check file exited
 func FileExited(path string) bool {
-	info, err := os.Stat(path)
+	info, err := os.Stat(FilePath(path))
 	if os.IsNotExist(err) {
 		return false
 	}

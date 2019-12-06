@@ -54,9 +54,9 @@ var sshUserNamePrompt = func(defaultShow string, stdio io.ReadWriteCloser) promp
 	}
 }
 
-var identityFilePrompt = func(defaultShow string, stdio io.ReadWriteCloser, validates ...func(string) error) promptui.Prompt {
+var identityFilePrompt = func(label, defaultShow string, stdio io.ReadWriteCloser, validates ...func(string) error) promptui.Prompt {
 	return promptui.Prompt{
-		Label: "Identity file",
+		Label: label,
 		Validate: MultiValidate(
 			append(
 				[](func(string) error){

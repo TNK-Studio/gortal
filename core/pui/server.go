@@ -112,7 +112,12 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 	var identityFile string
 	var identityFilePui promptui.Prompt
 	if hasIdentityFile == "yes" {
-		identityFilePui = identityFilePrompt("", stdio, FileExited("Identity File"))
+		identityFilePui = identityFilePrompt(
+			"Enter your identity file path",
+			"",
+			stdio,
+			FileExited("Identity File"),
+		)
 
 		identityFile, err = identityFilePui.Run()
 		if err != nil {
@@ -120,6 +125,7 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 		}
 	} else {
 		identityFilePui = identityFilePrompt(
+			"Enter new identity file path",
 			"",
 			stdio,
 			FileNotExited("Identity File"),
@@ -309,7 +315,7 @@ func GetEditedServersMenu(
 }
 
 // EditSSHUser EditSSHUser
-func EditSSHUser(sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, error) {
+func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, error) {
 	logger.Logger.Info("Delete ssh user")
 	stdio := utils.SessIO(sess)
 	usernamePui := sshUserNamePrompt(sshUser.SSHUsername, stdio)
@@ -319,15 +325,110 @@ func EditSSHUser(sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, e
 		return nil, err
 	}
 
-	identityFilePui := identityFilePrompt(sshUser.IdentityFile, stdio, FileExited("Identity File"))
+	hasIdentityFilePui := promptui.Prompt{
+		Label:    "Has identity file ? yes/no",
+		Validate: YesOrNo(),
+		Default:  utils.If(utils.FileExited(sshUser.IdentityFile), "yes", "no").(string),
+		Stdin:    stdio,
+		Stdout:   stdio,
+	}
 
-	identityFile, err := identityFilePui.Run()
+	hasIdentityFile, err := hasIdentityFilePui.Run()
 	if err != nil {
 		return nil, err
 	}
 
+	var identityFile string
+	var identityFilePui promptui.Prompt
+	if hasIdentityFile == "yes" {
+		identityFilePui = identityFilePrompt(
+			"Enter your identity file path",
+			sshUser.IdentityFile,
+			stdio,
+			FileExited("Identity File"),
+		)
+
+		identityFile, err = identityFilePui.Run()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		identityFilePui = identityFilePrompt(
+			"Enter new identity file path",
+			"",
+			stdio,
+			FileNotExited("Identity File"),
+			IsNotDir(),
+			func(input string) error {
+				var file *os.File
+				fileName := utils.FilePath(input)
+
+				defer func() {
+					if file != nil {
+						file.Close()
+					}
+
+					if utils.FileExited(fileName) {
+						err = os.Remove(fileName)
+						if err != nil {
+							logger.Logger.Error(err)
+						}
+					}
+				}()
+
+				file, err = os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0666)
+				if err != nil {
+					return err
+				}
+				return nil
+			},
+		)
+		identityFile, err = identityFilePui.Run()
+		if err != nil {
+			return nil, err
+		}
+		_, pubKeyFile, err := sshd.GenKey(identityFile)
+		if err != nil {
+			return nil, err
+		}
+		times := 0
+		for {
+			if times > 2 {
+				return nil, errors.New("Failed to copy public key to the server. ")
+			}
+			serverPasswdPui := promptui.Prompt{
+				Label:  "Server password (use to send your public key to the server). ",
+				Mask:   '*',
+				Stdin:  stdio,
+				Stdout: stdio,
+			}
+
+			serverPasswd, err := serverPasswdPui.Run()
+			if err != nil {
+				sshd.ErrorInfo(err, sess)
+				times++
+				continue
+			}
+
+			err = sshd.CopyID(
+				username,
+				server.Host,
+				server.Port,
+				serverPasswd,
+				pubKeyFile,
+			)
+			if err != nil {
+				sshd.ErrorInfo(err, sess)
+				times++
+				continue
+			}
+
+			break
+		}
+	}
+
 	allowAllUserPui := allowAllUserPrompt(
-		utils.If(len(*sshUser.AllowUsers) > 0, "no", "yes").(string),
+		utils.If(sshUser.AllowUsers == nil || len(*sshUser.AllowUsers) <= 0, "yes", "no").(string),
 		stdio,
 	)
 
@@ -389,7 +490,7 @@ func GetEditedSSHUsersMenu(server *config.Server) *[]*MenuItem {
 							parent := selectedChain[len(selectedChain)-1]
 							sshUserKey := parent.Info[sshUserInfoKey]
 							sshUser := (*server.SSHUsers)[sshUserKey]
-							newSSHUser, err := EditSSHUser(sshUser, sess)
+							newSSHUser, err := EditSSHUser(server, sshUser, sess)
 							if err != nil {
 								return err
 							}
@@ -402,7 +503,8 @@ func GetEditedSSHUsersMenu(server *config.Server) *[]*MenuItem {
 						},
 					},
 					&MenuItem{
-						Label: "Delete ssh user",
+						Label:             "Delete ssh user",
+						BackAfterSelected: true,
 						SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
 							parent := selectedChain[len(selectedChain)-1]
 							sshUserKey := parent.Info[sshUserInfoKey]
