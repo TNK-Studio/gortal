@@ -24,7 +24,7 @@ func MultiValidate(validates [](func(string) error)) func(string) error {
 func Required(field string) func(string) error {
 	return func(input string) error {
 		if strings.ReplaceAll(input, " ", "") == "" {
-			return errors.New(fmt.Sprintf("Please input %s", field))
+			return fmt.Errorf("Please input %s", field)
 		}
 		return nil
 	}

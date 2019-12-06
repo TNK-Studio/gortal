@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"gopkg.in/yaml.v2"
 )
 
@@ -56,13 +57,13 @@ type SSHUser struct {
 func (c *Config) ReadFrom(path string) error {
 	configFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Printf("Error reading YAML file: %s\n", err)
+		logger.Logger.Infof("Error reading YAML file: %s\n", err)
 		return err
 	}
 
 	err = yaml.Unmarshal([]byte(configFile), c)
 	if err != nil {
-		fmt.Printf("Error parsing YAML file: %s\n", err)
+		logger.Logger.Infof("Error parsing YAML file: %s\n", err)
 		return err
 	}
 	return nil
@@ -70,10 +71,10 @@ func (c *Config) ReadFrom(path string) error {
 
 // SaveTo save config
 func (c *Config) SaveTo(path string) error {
-	fmt.Printf("Save config to '%s'\n", path)
+	logger.Logger.Infof("Save config to '%s'\n", path)
 	bytes, err := yaml.Marshal(c)
 	if err != nil {
-		fmt.Printf("Error parsing YAML obj: %s\n", err)
+		logger.Logger.Infof("Error parsing YAML obj: %s\n", err)
 		return err
 	}
 	ioutil.WriteFile(path, bytes, 0644)
@@ -151,9 +152,9 @@ func (c *Config) GetUserByUsername(username string) *User {
 // }
 
 // GetUserServers get user servers list
-func (c *Config) GetUserServers(user *User) []*Server {
-	servers := make([]*Server, 0)
-	for _, server := range *c.Servers {
+func (c *Config) GetUserServers(user *User) map[string]*Server {
+	servers := make(map[string]*Server, 0)
+	for serverKey, server := range *c.Servers {
 	loop:
 		for _, sshUser := range *server.SSHUsers {
 			if sshUser.AllowUsers == nil {
@@ -166,26 +167,23 @@ func (c *Config) GetUserServers(user *User) []*Server {
 				}
 			}
 		}
-		servers = append(
-			servers,
-			server,
-		)
+		servers[serverKey] = server
 	}
 	return servers
 }
 
 // GetServerSSHUsers get all allow server' s ssh users
-func (c *Config) GetServerSSHUsers(user *User, server *Server) []*SSHUser {
-	sshUsers := make([]*SSHUser, 0)
-	for _, sshUser := range *server.SSHUsers {
+func (c *Config) GetServerSSHUsers(user *User, server *Server) map[string]*SSHUser {
+	sshUsers := make(map[string]*SSHUser, 0)
+	for sshUserKey, sshUser := range *server.SSHUsers {
 		if sshUser.AllowUsers == nil {
-			sshUsers = append(sshUsers, sshUser)
+			sshUsers[sshUserKey] = sshUser
 			continue
 		}
 
 		for _, username := range *sshUser.AllowUsers {
 			if user.Username == username {
-				sshUsers = append(sshUsers, sshUser)
+				sshUsers[sshUserKey] = sshUser
 			}
 		}
 	}

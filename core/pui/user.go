@@ -6,19 +6,16 @@ import (
 	"sort"
 
 	"github.com/TNK-Studio/gortal/config"
+	"github.com/TNK-Studio/gortal/utils"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
 	"github.com/gliderlabs/ssh"
 )
 
 // CreateUser new user
 func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string, *config.User, error) {
-	fmt.Println("Create a user.")
-	var stdio ssh.Session
-	if sess != nil {
-		stdio = *sess
-	} else {
-		stdio = nil
-	}
+	logger.Logger.Info("Create a user.")
+	stdio := utils.SessIO(sess)
 	usernamePui := promptui.Prompt{
 		Label: "Username",
 		Validate: MultiValidate([](func(string) error){
@@ -31,7 +28,7 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 			func(input string) error {
 				user := config.Conf.GetUserByUsername(input)
 				if user != nil {
-					return errors.New(fmt.Sprintf("Username '%s' of user is existed", input))
+					return fmt.Errorf("Username '%s' of user is existed", input)
 				}
 				return nil
 			},
@@ -98,16 +95,16 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 
 	isAdmin = IsAdminString == "yes" || isAdmin
 	if isAdmin {
-		fmt.Println("Create a admin user")
+		logger.Logger.Info("Create a admin user")
 	}
 	key, user := config.Conf.AddUser(username, passwd, isAdmin)
 	return &key, user, nil
 }
 
 // GetUsersMenu get users
-func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session) error) func(int, *MenuItem, *ssh.Session) *[]MenuItem {
-	return func(index int, menuItem *MenuItem, sess *ssh.Session) *[]MenuItem {
-		menu := make([]MenuItem, 0)
+func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error) func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuItem {
+	return func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) *[]*MenuItem {
+		menu := make([]*MenuItem, 0)
 		userKeys := make([]string, 0)
 		for userKey := range *config.Conf.Users {
 			userKeys = append(userKeys, userKey)
@@ -118,10 +115,13 @@ func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Ses
 		}
 		for _, userKey := range userKeys {
 			user := (*config.Conf.Users)[userKey]
+			info := make(map[string]string, 0)
+			info[userInfoKey] = userKey
 			menu = append(
 				menu,
-				MenuItem{
+				&MenuItem{
 					Label:             user.Username,
+					Info:              info,
 					SubMenuTitle:      fmt.Sprintf("Please select. "),
 					SelectedFunc:      selectedFunc,
 					BackAfterSelected: true,
@@ -132,19 +132,14 @@ func GetUsersMenu(selectedFunc func(index int, menuItem *MenuItem, sess *ssh.Ses
 	}
 }
 
-// ChangePassword ChangePassword
+// ChangePassword ChangePassword\
 func ChangePassword(username string, sess *ssh.Session) error {
-	fmt.Printf("GetChangePassword of user '%s'.", username)
-	var stdio ssh.Session
-	if sess != nil {
-		stdio = *sess
-	} else {
-		stdio = nil
-	}
+	logger.Logger.Infof("GetChangePassword of user '%s'.", username)
+	stdio := utils.SessIO(sess)
 
 	user := (*config.Conf).GetUserByUsername(username)
 	if user == nil {
-		return errors.New(fmt.Sprintf("Username '%s' of user not existed. ", username))
+		return fmt.Errorf("Username '%s' of user not existed. ", username)
 	}
 
 	passwdPui := promptui.Prompt{

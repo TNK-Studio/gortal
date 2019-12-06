@@ -1,2 +1,3 @@
 # gortal
-A SSH Portal written by Go, use to manage &amp; jump to any servers.
+
+A lightweight jumpserver written by Go, use to manage & jump to any servers.

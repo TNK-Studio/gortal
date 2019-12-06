@@ -38,7 +38,7 @@ func (jps *JumpService) Run(s *ssh.Session) {
 }
 
 func setupConfig() error {
-	fmt.Println("Config file not found. Setup config.", *config.ConfPath)
+	logger.Logger.Info("Config file not found. Setup config.", *config.ConfPath)
 	_, _, err := pui.CreateUser(false, true, nil)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func Configurate() error {
 	if *config.ConfPath == "" {
 		return errors.New("Please specify a config file. ")
 	}
-	fmt.Println("Read config file", *config.ConfPath)
+	logger.Logger.Info("Read config file", *config.ConfPath)
 	if !config.ConfigFileExisted(*config.ConfPath) {
 		err := setupConfig()
 		return err
