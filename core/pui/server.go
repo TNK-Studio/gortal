@@ -85,6 +85,8 @@ func EditServer(server *config.Server, sess *ssh.Session) (*config.Server, error
 // AddServerSSHUser add server ssh user
 func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSHUser, error) {
 	logger.Logger.Info("Add a server ssh user.")
+	var runningErr *error
+
 	stdio := utils.SessIO(sess)
 	usernamePui := sshUserNamePrompt("", stdio)
 	server := (*config.Conf.Servers)[serverKey]
@@ -124,9 +126,10 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 			return nil, nil, err
 		}
 	} else {
+		defaultPath := fmt.Sprintf("~/.ssh/id_%s", strings.ReplaceAll(server.Host, ".", "_"))
 		identityFilePui = identityFilePrompt(
 			"Enter new identity file path",
-			"",
+			defaultPath,
 			stdio,
 			FileNotExited("Identity File"),
 			IsNotDir(),
@@ -158,14 +161,27 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 		if err != nil {
 			return nil, nil, err
 		}
+
+		runningErr = &err
+		defer func() {
+			if *runningErr != nil && identityFile != "" {
+				if utils.FileExited(identityFile) {
+					os.Remove(utils.FilePath(identityFile))
+				}
+			}
+		}()
+
 		_, pubKeyFile, err := sshd.GenKey(identityFile)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		times := 0
 		for {
 			if times > 2 {
-				return nil, nil, errors.New("Failed to copy public key to the server. ")
+				err = errors.New("Failed to copy public key to the server. ")
+				runningErr = &err
+				return nil, nil, err
 			}
 			serverPasswdPui := promptui.Prompt{
 				Label:  "Server password (use to send your public key to the server). ",
@@ -181,7 +197,7 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 				continue
 			}
 
-			err = sshd.CopyID(
+			_, err = sshd.CopyID(
 				username,
 				server.Host,
 				server.Port,
@@ -201,12 +217,18 @@ func AddServerSSHUser(serverKey string, sess *ssh.Session) (*string, *config.SSH
 	allowAllUserPui := allowAllUserPrompt("", stdio)
 
 	allAllUser, err := allowAllUserPui.Run()
+	if err != nil {
+		runningErr = &err
+		return nil, nil, err
+	}
+
 	allowUsersStr := ""
 	if allAllUser == "no" {
 		allowUsersPui := allowUsersPrompt("", stdio)
 
 		allowUsersStr, err = allowUsersPui.Run()
 		if err != nil {
+			runningErr = &err
 			return nil, nil, err
 		}
 	}
@@ -317,6 +339,8 @@ func GetEditedServersMenu(
 // EditSSHUser EditSSHUser
 func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Session) (*config.SSHUser, error) {
 	logger.Logger.Info("Delete ssh user")
+	var runningErr *error
+
 	stdio := utils.SessIO(sess)
 	usernamePui := sshUserNamePrompt(sshUser.SSHUsername, stdio)
 
@@ -353,9 +377,10 @@ func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Sessi
 			return nil, err
 		}
 	} else {
+		defaultPath := fmt.Sprintf("~/.ssh/id_%s", strings.ReplaceAll(server.Host, ".", "_"))
 		identityFilePui = identityFilePrompt(
 			"Enter new identity file path",
-			"",
+			defaultPath,
 			stdio,
 			FileNotExited("Identity File"),
 			IsNotDir(),
@@ -387,14 +412,27 @@ func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Sessi
 		if err != nil {
 			return nil, err
 		}
+
+		runningErr = &err
+		defer func() {
+			if *runningErr != nil && identityFile != "" {
+				if utils.FileExited(identityFile) {
+					os.Remove(utils.FilePath(identityFile))
+				}
+			}
+		}()
+
 		_, pubKeyFile, err := sshd.GenKey(identityFile)
 		if err != nil {
 			return nil, err
 		}
+
 		times := 0
 		for {
 			if times > 2 {
-				return nil, errors.New("Failed to copy public key to the server. ")
+				err = errors.New("Failed to copy public key to the server. ")
+				runningErr = &err
+				return nil, err
 			}
 			serverPasswdPui := promptui.Prompt{
 				Label:  "Server password (use to send your public key to the server). ",
@@ -410,7 +448,7 @@ func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Sessi
 				continue
 			}
 
-			err = sshd.CopyID(
+			_, err = sshd.CopyID(
 				username,
 				server.Host,
 				server.Port,
@@ -433,11 +471,21 @@ func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Sessi
 	)
 
 	allAllUser, err := allowAllUserPui.Run()
+	if err != nil {
+		runningErr = &err
+		return nil, err
+	}
+
 	allowUsersStr := ""
 	if allAllUser == "no" {
-		allowUsersPui := allowUsersPrompt(strings.Join(*sshUser.AllowUsers, ","), stdio)
+		defaultUsers := ""
+		if sshUser.AllowUsers != nil {
+			defaultUsers = strings.Join(*sshUser.AllowUsers, ",")
+		}
+		allowUsersPui := allowUsersPrompt(defaultUsers, stdio)
 		allowUsersStr, err = allowUsersPui.Run()
 		if err != nil {
+			runningErr = &err
 			return nil, err
 		}
 	}
@@ -455,7 +503,7 @@ func EditSSHUser(server *config.Server, sshUser *config.SSHUser, sess *ssh.Sessi
 		AllowUsers:   allowUsers,
 	}
 
-	return newSSHUser, nil
+	return newSSHUser, err
 }
 
 // DelSSHUser DelSSHUser

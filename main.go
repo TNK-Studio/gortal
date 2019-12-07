@@ -30,6 +30,12 @@ func main() {
 	}
 
 	ssh.Handle(func(s ssh.Session) {
+		defer func() {
+			if e, ok := recover().(error); ok {
+				logger.Logger.Error(e)
+			}
+			s.Close()
+		}()
 		jps := jump.JumpService{}
 		jps.Run(&s)
 	})

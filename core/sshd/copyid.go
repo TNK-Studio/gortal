@@ -11,15 +11,15 @@ import (
 )
 
 // CopyID CopyID
-func CopyID(username, host string, port int, passwd, pubKeyFile string) error {
+func CopyID(username, host string, port int, passwd, pubKeyFile string) ([]byte, error) {
 	client, err := GetClientByPasswd(username, host, port, passwd)
 	if err != nil {
-		return err
+		return []byte(""), err
 	}
 
 	file, err := os.Open(utils.FilePath(pubKeyFile))
 	if err != nil {
-		return err
+		return []byte(""), err
 	}
 	defer file.Close()
 
@@ -30,12 +30,10 @@ func CopyID(username, host string, port int, passwd, pubKeyFile string) error {
 	copyIDCmd = strings.ReplaceAll(copyIDCmd, "\n", "")
 	logger.Logger.Debugf("CopyID run command:\n%s", copyIDCmd)
 
-	out, err := client.Cmd(copyIDCmd).Output()
+	output, err := client.Cmd(copyIDCmd).Output()
 	if err != nil {
-		return err
+		return []byte(""), err
 	}
 
-	logger.Logger.Debugf("%s", string(out))
-
-	return nil
+	return output, nil
 }
