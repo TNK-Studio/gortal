@@ -1,6 +1,6 @@
 # gortal
 
-A super lightweight jumpserver service developed using the Go language. [English Document](./README.md) | [中文文档](./doc/README_CN)
+A super lightweight jumpserver service developed using the Go language. [English Document](./README.md) | [中文文档](./doc/README_CN.md)
 
 ![gortal](./doc/gortal.gif)
 
