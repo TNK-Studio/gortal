@@ -1,10 +1,7 @@
 # gortal
 
-[![Actions Status](https://github.com/TNK-Studio/gortal/workflows/Build%20release/badge.svg)](https://github.com/TNK-Studio/gortal/actions)
-[![Docker build](https://img.shields.io/docker/cloud/build/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)
-[![Docker build automated](https://img.shields.io/docker/cloud/automated/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)
-[![Docker pull](https://img.shields.io/docker/pulls/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)
-[![Release Download](https://img.shields.io/github/downloads/TNK-Studio/gortal/total)](https://github.com/TNK-Studio/gortal/releases)
+[![Actions Status](https://img.shields.io/github/workflow/status/TNK-Studio/gortal/Build%20release)](https://github.com/TNK-Studio/gortal/actions)[![Docker build](https://img.shields.io/docker/cloud/build/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)[![Docker build automated](https://img.shields.io/docker/cloud/automated/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)
+[![Docker pull](https://img.shields.io/docker/pulls/elfgzp/gortal)](https://hub.docker.com/repository/docker/elfgzp/gortal)[![Release Download](https://img.shields.io/github/downloads/TNK-Studio/gortal/total)](https://github.com/TNK-Studio/gortal/releases)
 
 一个使用 `Go` 语言开发的，超级轻量的堡垒机（跳板机）服务。[English Document](../README.md) | [中文文档](./doc/README_CN.md)
 
@@ -18,7 +15,7 @@ gortal 需要一台拥有公网 IP 的服务器作为跳板机的服务器。
 ### Docker
 
 ```shell
-$ docker push elfgzp/gortal:tagname
+$ docker pull elfgzp/gortal:latest
 $ mkdir -p ~/.gortal/.ssh
 $ docker run \
   -p 2222:2222 \
@@ -66,4 +63,3 @@ Use the arrow keys to navigate: ↓ ↑ → ←
 ```
 
 再次使用你的密码登录后就可以使用了。  
-
