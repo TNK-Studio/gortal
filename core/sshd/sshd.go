@@ -51,3 +51,9 @@ func ErrorInfo(err error, sess *ssh.Session) {
 	read := color.New(color.FgRed)
 	read.Fprint(*sess, fmt.Sprintf("%s\n", err))
 }
+
+// Info Info
+func Info(msg string, sess *ssh.Session) {
+	green := color.New(color.FgGreen)
+	green.Fprint(*sess, msg)
+}

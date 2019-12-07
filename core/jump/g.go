@@ -8,6 +8,7 @@ import (
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/pui"
+	"github.com/TNK-Studio/gortal/core/sshd"
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
@@ -28,32 +29,23 @@ func (jps *JumpService) setSession(sess *ssh.Session) {
 }
 
 // Run jump
-func (jps *JumpService) Run(s *ssh.Session) {
+func (jps *JumpService) Run(sess *ssh.Session) {
 	defer func() {
-		(*jps.sess).Exit(0)
+		(*sess).Exit(0)
 	}()
-	jps.setSession(s)
+	relogin, err := Configurate(sess)
+	if err != nil {
+		logger.Logger.Error("%s\n", err)
+		return
+	}
+	if relogin {
+		sshd.Info("Please login again with your new acount. \n", sess)
+		return
+	}
+	jps.setSession(sess)
 	jps.persionUI = &pui.PUI{}
 	jps.persionUI.SetSession(jps.sess)
 	jps.persionUI.ShowMainMenu()
-}
-
-func setupConfig() error {
-	logger.Logger.Info("Config file not found. Setup config.", *config.ConfPath)
-	_, _, err := pui.CreateUser(false, true, nil)
-	if err != nil {
-		return err
-	}
-	serverKey, _, err := pui.AddServer(nil)
-	if err != nil {
-		return err
-	}
-	_, _, err = pui.AddServerSSHUser(*serverKey, nil)
-	if err != nil {
-		return err
-	}
-	config.Conf.SaveTo(*config.ConfPath)
-	return nil
 }
 
 // VarifyUser VarifyUser
@@ -70,22 +62,30 @@ func VarifyUser(ctx ssh.Context, pass string) bool {
 }
 
 // Configurate Configurate
-func Configurate() error {
+func Configurate(sess *ssh.Session) (bool, error) {
 	if *config.ConfPath == "" {
-		return errors.New("Please specify a config file. ")
+		return false, errors.New("Please specify a config file. ")
 	}
 	logger.Logger.Info("Read config file", *config.ConfPath)
 	if !utils.FileExited(*config.ConfPath) {
-		err := setupConfig()
-		return err
+		_, _, err := pui.CreateUser(false, true, sess)
+		if err != nil {
+			sshd.ErrorInfo(err, sess)
+			return false, err
+		}
+		config.Conf.SaveTo(*config.ConfPath)
+		return true, nil
 	} else {
 		config.Conf.ReadFrom(*config.ConfPath)
 		if config.Conf.Users == nil || len(*config.Conf.Users) < 1 {
-			_, _, err := pui.CreateUser(false, true, nil)
+			_, _, err := pui.CreateUser(false, true, sess)
 			if err != nil {
-				return err
+				sshd.ErrorInfo(err, sess)
+				return false, err
 			}
+			config.Conf.SaveTo(*config.ConfPath)
+			return true, nil
 		}
 	}
-	return nil
+	return false, nil
 }
