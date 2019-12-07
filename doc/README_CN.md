@@ -15,7 +15,7 @@ gortal 需要一台拥有公网 IP 的服务器作为跳板机的服务器。
 ### Docker
 
 ```shell
-$ docker push elfgzp/gortal:tagname
+$ docker pull elfgzp/gortal:latest
 $ mkdir -p ~/.gortal/.ssh
 $ docker run \
   -p 2222:2222 \
@@ -63,4 +63,3 @@ Use the arrow keys to navigate: ↓ ↑ → ←
 ```
 
 再次使用你的密码登录后就可以使用了。  
-

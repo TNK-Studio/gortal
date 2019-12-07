@@ -16,12 +16,12 @@ This server needs external network access to be able to access the target server
 
 ```shell
 $ docker pull elfgzp/gortal:latest
-$ mkdir -p ~ / .gortal / .ssh
+$ mkdir -p ~/.gortal/.ssh
 $ docker run \
-  -p 2222: 2222 \
-  -v ~ / .gortal: / root \
-  -v ~ / .gortal / .ssh: /root/.ssh \
-  --name gortal -d gortal: latest
+  -p 2222:2222 \
+  -v ~/.gortal:/root\
+  -v ~/.gortal/.ssh:/root/.ssh\
+  --name gortal -d gortal:latest
 ```
 
 ### Binary file
@@ -30,7 +30,7 @@ Download the version you need from the [Release] (https://github.com/TNK-Studio/
 
 ```shell
 $ ./gortal
-starting ssh server on port 2222 ...
+starting ssh server on port 2222...
 ```
 
 ## How to use
@@ -43,8 +43,8 @@ After the service is started, you only need to use the `ssh` command to access t
 $ ssh 127.0.0.1 -p 2222
 root@127.0.0.1's password:
 New Username: root█
-Password: ****** █
-Confirm your password: ****** █
+Password: ******█
+Confirm your password: ******█
 Please login again with your new acount.
 Shared connection to 127.0.0.1 closed.
 ```
@@ -56,10 +56,10 @@ $ ssh root@127.0.0.1 -p 2222
 root@127.0.0.1's password:
 Use the arrow keys to navigate: ↓ ↑ → ←
 ? Please select the function you need:
-  ▸ List servers
-    Edit users
-    Edit servers
-    Quit
+  ▸ List servers
+    Edit users
+    Edit servers
+    Quit
 ```
 
 You can use it after logging in with your password again.
