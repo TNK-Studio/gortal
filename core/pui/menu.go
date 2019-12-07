@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/TNK-Studio/gortal/config"
+	"github.com/TNK-Studio/gortal/core/sshd"
 	"github.com/gliderlabs/ssh"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 func defaultShow(int, *MenuItem, *ssh.Session, []*MenuItem) bool { return true }
@@ -108,6 +110,10 @@ func init() {
 					if err != nil {
 						return err
 					}
+					sshd.Info("Please login again with your new password.\n", sess)
+					(*sess).Exit(0)
+					sshConn := (*sess).Context().Value(ssh.ContextKeyConn).(gossh.Conn)
+					sshConn.Close()
 					return nil
 				},
 			},

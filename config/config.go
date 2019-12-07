@@ -55,17 +55,35 @@ type SSHUser struct {
 
 // ReadFrom read config
 func (c *Config) ReadFrom(path string) error {
+	users := make(map[string]*User)
+	servers := make(map[string]*Server)
+	config := &Config{
+		Users:   &users,
+		Servers: &servers,
+	}
+
+	var readConfigErr *error
+	defer func() {
+		if readConfigErr != nil && *readConfigErr != nil {
+			*c = *config
+		}
+	}()
+
 	configFile, err := ioutil.ReadFile(utils.FilePath(path))
 	if err != nil {
 		logger.Logger.Warningf("Error reading YAML file: %s\n", err)
+		readConfigErr = &err
 		return err
 	}
 
-	err = yaml.Unmarshal([]byte(configFile), c)
+	err = yaml.Unmarshal([]byte(configFile), config)
 	if err != nil {
 		logger.Logger.Warningf("Error parsing YAML file: %s\n", err)
+		readConfigErr = &err
 		return err
 	}
+
+	*c = *config
 	return nil
 }
 

@@ -35,7 +35,7 @@ func main() {
 		defer func() {
 			s.Close()
 		}()
-		jps := jump.JumpService{}
+		jps := jump.Service{}
 		jps.Run(&s)
 	})
 

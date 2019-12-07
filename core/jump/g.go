@@ -12,24 +12,25 @@ import (
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 func init() {
 	config.ConfPath = flag.String("c", fmt.Sprintf("%s%s", os.Getenv("HOME"), "/.gortal.yml"), "Config file")
 }
 
-// JumpService JumpService
-type JumpService struct {
+// Service Service
+type Service struct {
 	sess      *ssh.Session
 	persionUI *pui.PUI
 }
 
-func (jps *JumpService) setSession(sess *ssh.Session) {
+func (jps *Service) setSession(sess *ssh.Session) {
 	jps.sess = sess
 }
 
 // Run jump
-func (jps *JumpService) Run(sess *ssh.Session) {
+func (jps *Service) Run(sess *ssh.Session) {
 	defer func() {
 		(*sess).Exit(0)
 	}()
@@ -40,6 +41,8 @@ func (jps *JumpService) Run(sess *ssh.Session) {
 	}
 	if relogin {
 		sshd.Info("Please login again with your new acount. \n", sess)
+		sshConn := (*sess).Context().Value(ssh.ContextKeyConn).(gossh.Conn)
+		sshConn.Close()
 		return
 	}
 	jps.setSession(sess)
