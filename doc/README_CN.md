@@ -1,6 +1,6 @@
 # gortal 
 
-一个使用 `Go` 语言开发的，超级轻量的堡垒机（跳板机）服务。[English Document](./README.md) | [中文文档](./doc/README_CN.md)
+一个使用 `Go` 语言开发的，超级轻量的堡垒机（跳板机）服务。[English Document](../README.md) | [中文文档](./doc/README_CN.md)
 
 ![gortal](./gortal.gif)
 
