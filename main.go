@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/jump"
@@ -45,10 +46,16 @@ func main() {
 		nil,
 		ssh.PasswordAuth(func(ctx ssh.Context, pass string) bool {
 			config.Conf.ReadFrom(*config.ConfPath)
+			var success bool
 			if (len(*config.Conf.Users)) < 1 {
-				return pass == "newuser"
+				success = (pass == "newuser")
+			} else {
+				success = jump.VarifyUser(ctx, pass)
 			}
-			return jump.VarifyUser(ctx, pass)
+			if !success {
+				time.Sleep(time.Second * 3)
+			}
+			return success
 		}),
 		ssh.HostKeyFile(utils.FilePath(*hostKeyFile)),
 	),
