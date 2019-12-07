@@ -17,7 +17,7 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 	logger.Logger.Info("Create a user.")
 	stdio := utils.SessIO(sess)
 	usernamePui := promptui.Prompt{
-		Label: "Username",
+		Label: "New Username",
 		Validate: MultiValidate([](func(string) error){
 			func(input string) error {
 				if len(input) < 3 {

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"gopkg.in/yaml.v2"
 )
@@ -54,15 +55,15 @@ type SSHUser struct {
 
 // ReadFrom read config
 func (c *Config) ReadFrom(path string) error {
-	configFile, err := ioutil.ReadFile(path)
+	configFile, err := ioutil.ReadFile(utils.FilePath(path))
 	if err != nil {
-		logger.Logger.Infof("Error reading YAML file: %s\n", err)
+		logger.Logger.Warningf("Error reading YAML file: %s\n", err)
 		return err
 	}
 
 	err = yaml.Unmarshal([]byte(configFile), c)
 	if err != nil {
-		logger.Logger.Infof("Error parsing YAML file: %s\n", err)
+		logger.Logger.Warningf("Error parsing YAML file: %s\n", err)
 		return err
 	}
 	return nil
