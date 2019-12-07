@@ -15,7 +15,7 @@ This server needs external network access to be able to access the target server
 ### Docker
 
 ```shell
-$ docker push elfgzp / gortal: tagname
+$ docker pull elfgzp/gortal:latest
 $ mkdir -p ~ / .gortal / .ssh
 $ docker run \
   -p 2222: 2222 \
