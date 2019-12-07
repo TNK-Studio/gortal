@@ -110,5 +110,7 @@ var allowUsersPrompt = func(defaultShow string, stdio io.ReadWriteCloser) prompt
 				},
 			},
 		),
+		Stdin:  stdio,
+		Stdout: stdio,
 	}
 }
