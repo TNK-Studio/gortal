@@ -45,6 +45,7 @@ var (
 	ListServersMenu *MenuItem
 	EditUsersMenu   *MenuItem
 	EditServersMenu *MenuItem
+	PersonalMenu    *MenuItem
 
 	sshUserInfoKey = "sshUserKey"
 	serverInfoKey  = "serverKey"
@@ -98,24 +99,6 @@ func init() {
 						return nil
 					},
 				),
-			},
-			&MenuItem{
-				Label: "Change your password",
-				SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
-					err := ChangePassword((*sess).User(), sess)
-					if err != nil {
-						return err
-					}
-					err = config.Conf.SaveTo(*config.ConfPath)
-					if err != nil {
-						return err
-					}
-					sshd.Info("Please login again with your new password.\n", sess)
-					(*sess).Exit(0)
-					sshConn := (*sess).Context().Value(ssh.ContextKeyConn).(gossh.Conn)
-					sshConn.Close()
-					return nil
-				},
 			},
 		}),
 	}
@@ -223,9 +206,34 @@ func init() {
 		}),
 	}
 
+	PersonalMenu = &MenuItem{
+		Label: "Edit personal info",
+		GetSubMenu: staticSubMenu(&[]*MenuItem{
+			&MenuItem{
+				Label: "Change your password",
+				SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
+					err := ChangePassword((*sess).User(), sess)
+					if err != nil {
+						return err
+					}
+					err = config.Conf.SaveTo(*config.ConfPath)
+					if err != nil {
+						return err
+					}
+					sshd.Info("Please login again with your new password.\n", sess)
+					(*sess).Exit(0)
+					sshConn := (*sess).Context().Value(ssh.ContextKeyConn).(gossh.Conn)
+					sshConn.Close()
+					return nil
+				},
+			},
+		}),
+	}
+
 	MainMenu = &[]*MenuItem{
 		ListServersMenu,
 		EditUsersMenu,
 		EditServersMenu,
+		PersonalMenu,
 	}
 }
