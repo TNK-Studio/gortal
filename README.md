@@ -26,7 +26,7 @@ $ docker run \
 
 ### Binary file
 
-Download the version you need from the [Release] (https://github.com/TNK-Studio/gortal/releases) page, decompress it to get the `gortal` binary executable, and run it.
+Download the version you need from the [Release](https://github.com/TNK-Studio/gortal/releases) page, decompress it to get the `gortal` binary executable, and run it.
 
 ```shell
 $ ./gortal
