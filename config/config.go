@@ -173,6 +173,9 @@ func (c *Config) GetUserByUsername(username string) *User {
 func (c *Config) GetUserServers(user *User) map[string]*Server {
 	servers := make(map[string]*Server, 0)
 	for serverKey, server := range *c.Servers {
+		if (*server).SSHUsers == nil {
+			return servers
+		}
 	loop:
 		for _, sshUser := range *server.SSHUsers {
 			if sshUser.AllowUsers == nil {

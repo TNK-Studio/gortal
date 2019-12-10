@@ -110,16 +110,31 @@ func init() {
 			&MenuItem{
 				Label: "Add server",
 				SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
+					var runningErr *error
+					var serverKey *string
+
+					defer func() {
+						if runningErr != nil && serverKey != nil {
+							server := (*config.Conf.Servers)[*serverKey]
+							if server != nil {
+								delete(*config.Conf.Servers, *serverKey)
+							}
+						}
+					}()
+
 					serverKey, _, err := AddServer(sess)
 					if err != nil {
+						runningErr = &err
 						return err
 					}
 					_, _, err = AddServerSSHUser(*serverKey, sess)
 					if err != nil {
+						runningErr = &err
 						return err
 					}
 					config.Conf.SaveTo(*config.ConfPath)
 					if err != nil {
+						runningErr = &err
 						return err
 					}
 					return nil
