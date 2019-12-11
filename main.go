@@ -25,6 +25,49 @@ func init() {
 	hostKeyFile = flag.String("hk", "~/.ssh/id_rsa", "Host key file")
 }
 
+func passwordAuth(ctx ssh.Context, pass string) bool {
+	config.Conf.ReadFrom(*config.ConfPath)
+	var success bool
+	if (len(*config.Conf.Users)) < 1 {
+		success = (pass == "newuser")
+	} else {
+		success = jump.VarifyUser(ctx, pass)
+	}
+	if !success {
+		time.Sleep(time.Second * 3)
+	}
+	return success
+}
+
+func sessionHandler(sess *ssh.Session) {
+	defer func() {
+		(*sess).Close()
+	}()
+
+	rawCmd := (*sess).RawCommand()
+	cmd, args, err := sshd.ParseRawCommand(rawCmd)
+	if err != nil {
+		sshd.ErrorInfo(err, sess)
+		return
+	}
+
+	switch cmd {
+	case "scp":
+		sshd.ExecuteSCP(args, sess)
+	default:
+		sshHandler(sess)
+	}
+}
+
+func sshHandler(sess *ssh.Session) {
+	jps := jump.Service{}
+	jps.Run(sess)
+}
+
+func scpHandler(args []string, sess *ssh.Session) {
+	sshd.ExecuteSCP(args, sess)
+}
+
 func main() {
 	flag.Parse()
 
@@ -32,31 +75,15 @@ func main() {
 		sshd.GenKey(*hostKeyFile)
 	}
 
-	ssh.Handle(func(s ssh.Session) {
-		defer func() {
-			s.Close()
-		}()
-		jps := jump.Service{}
-		jps.Run(&s)
+	ssh.Handle(func(sess ssh.Session) {
+		sessionHandler(&sess)
 	})
 
 	log.Printf("starting ssh server on port %d...\n", *Port)
 	log.Fatal(ssh.ListenAndServe(
 		fmt.Sprintf(":%d", *Port),
 		nil,
-		ssh.PasswordAuth(func(ctx ssh.Context, pass string) bool {
-			config.Conf.ReadFrom(*config.ConfPath)
-			var success bool
-			if (len(*config.Conf.Users)) < 1 {
-				success = (pass == "newuser")
-			} else {
-				success = jump.VarifyUser(ctx, pass)
-			}
-			if !success {
-				time.Sleep(time.Second * 3)
-			}
-			return success
-		}),
+		ssh.PasswordAuth(passwordAuth),
 		ssh.HostKeyFile(utils.FilePath(*hostKeyFile)),
 	),
 	)

@@ -1,7 +1,9 @@
 package sshd
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/fatih/color"
@@ -44,6 +46,21 @@ func Connect(host string, port int, username string, privKeyFile string, sess *s
 	}
 
 	return nil
+}
+
+// ParseRawCommand ParseRawCommand
+func ParseRawCommand(command string) (string, []string, error) {
+	parts := strings.Split(command, " ")
+
+	if len(parts) < 1 {
+		return "", nil, errors.New("No command in payload: " + command)
+	}
+
+	if len(parts) < 2 {
+		return parts[0], []string{}, nil
+	}
+
+	return parts[0], parts[1:], nil
 }
 
 // ErrorInfo ErrorInfo

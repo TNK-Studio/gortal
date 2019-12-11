@@ -289,7 +289,7 @@ func GetServersMenu() func(int, *MenuItem, *ssh.Session, []*MenuItem) *[]*MenuIt
 			menu = append(
 				menu,
 				&MenuItem{
-					Label:        server.Name,
+					Label:        fmt.Sprintf("%s: %s", serverKey, server.Name),
 					Info:         info,
 					SubMenuTitle: fmt.Sprintf("Please select ssh user to login '%s'", server.Name),
 					GetSubMenu:   GetServerSSHUsersMenu(server),
@@ -323,7 +323,7 @@ func GetEditedServersMenu(
 			menu = append(
 				menu,
 				&MenuItem{
-					Label:             server.Name,
+					Label:             fmt.Sprintf("%s: %s", serverKey, server.Name),
 					Info:              info,
 					SubMenuTitle:      fmt.Sprintf("Please select. "),
 					GetSubMenu:        getSubMenu,
