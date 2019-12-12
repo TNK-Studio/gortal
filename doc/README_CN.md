@@ -35,6 +35,8 @@ starting ssh server on port 2222...
 
 ## 使用说明  
 
+### 第一次使用  
+
 gortal 服务启动后会在 `2222` 端口开启一个 `sshd` 服务，你也可以通过 `-p` 设置启动端口。  
 
 服务启动后，你只需要使用 `ssh` 命令访问该服务，注意访问的为你跳板机的 ip 或域名，这里演示本地 ip。  
@@ -54,12 +56,28 @@ Shared connection to 127.0.0.1 closed.
 ```shell
 $ ssh root@127.0.0.1 -p 2222
 root@127.0.0.1's password:
-Use the arrow keys to navigate: ↓ ↑ → ←
-? Please select the function you need:
+Use the arrow keys to navigate: ↓ ↑ → ← 
+? Please select the function you need: 
   ▸ List servers
     Edit users
     Edit servers
+    Edit personal info
     Quit
 ```
 
 再次使用你的密码登录后就可以使用了。  
+
+### 通过跳板机复制文件到服务器  
+
+如果你想通过跳板机复制文件到服务器，你可以通过 `scp` 命令按照以下格式：  
+
+```shell
+$ scp -P 2222 ~/Desktop/README.md  gzp@jumpserver:gzp@server2:~/Desktop/README1.md
+README.md                                        100% 9279    73.9KB/s   00:00
+```
+
+注意在 `gzp@jumpserver` 后面用 `:` 加上你需要传输的服务器的 `key` 和 `username`，最后写上目标路径。目前不支持文件夹复制，请压缩文件后在上传。  
+
+### 通过跳板机从服务器复制文件  
+
+> 功能待开发  
