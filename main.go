@@ -10,6 +10,7 @@ import (
 	"github.com/TNK-Studio/gortal/core/jump"
 	"github.com/TNK-Studio/gortal/core/sshd"
 	"github.com/TNK-Studio/gortal/utils"
+	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/gliderlabs/ssh"
 )
 
@@ -76,6 +77,11 @@ func main() {
 	}
 
 	ssh.Handle(func(sess ssh.Session) {
+		defer func() {
+			if e, ok := recover().(error); ok {
+				logger.Logger.Panic(e)
+			}
+		}()
 		sessionHandler(&sess)
 	})
 
