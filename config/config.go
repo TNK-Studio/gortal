@@ -164,10 +164,15 @@ func (c *Config) GetUserByUsername(username string) *User {
 	return nil
 }
 
-// // GetUsers GetUsers
-// func (c *Config) GetUsers() []*User {
-
-// }
+// GetServerByName GetServerByName
+func (c *Config) GetServerByName(name string) *Server {
+	for _, server := range *c.Servers {
+		if server.Name == name {
+			return server
+		}
+	}
+	return nil
+}
 
 // GetUserServers get user servers list
 func (c *Config) GetUserServers(user *User) map[string]*Server {

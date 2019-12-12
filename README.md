@@ -35,6 +35,8 @@ starting ssh server on port 2222...
 
 ## How to use
 
+### First Time  
+
 After the gortal service is started, an sshd service will be started on port `2222`. You can also set the startup port through `-p`.
 
 After the service is started, you only need to use the `ssh` command to access the service.
@@ -54,12 +56,29 @@ The default user password for the first access is `newuser`, and then the comman
 ```shell
 $ ssh root@127.0.0.1 -p 2222
 root@127.0.0.1's password:
-Use the arrow keys to navigate: ↓ ↑ → ←
-? Please select the function you need:
+Use the arrow keys to navigate: ↓ ↑ → ← 
+? Please select the function you need: 
   ▸ List servers
     Edit users
     Edit servers
+    Edit personal info
     Quit
 ```
 
 You can use it after logging in with your password again.
+
+### Copy files to server via jumpserver
+
+If you want to copy files to the server via a springboard, you can use the `scp` command in the following format:
+
+```shell
+$ scp -P 2222 ~/Desktop/README.md  gzp@jumpserver:gzp@server2:~/Desktop/README1.md
+README.md                                        100% 9279    73.9KB/s   00:00
+```
+
+Note the use of `:` after `gzp@jumpserver` plus the `key` and `username` of the server you need to transfer, and finally write the destination path.
+Folder transfer is currently not supported. Please compress the file and upload it.
+
+### Copy files from server via jumpserver
+
+> To do
