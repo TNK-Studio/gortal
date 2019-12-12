@@ -522,6 +522,9 @@ func DelSSHUser(server *config.Server, sshUserKey string, sess *ssh.Session) err
 // GetEditedSSHUsersMenu GetEditedSSHUsersMenu
 func GetEditedSSHUsersMenu(server *config.Server) *[]*MenuItem {
 	menu := make([]*MenuItem, 0)
+	if server.SSHUsers == nil {
+		return nil
+	}
 
 	for sshUserKey, sshUser := range *server.SSHUsers {
 		info := make(map[string]string)
