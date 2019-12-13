@@ -67,18 +67,19 @@ Use the arrow keys to navigate: ↓ ↑ → ←
 
 You can use it after logging in with your password again.
 
-### Copy files to server via jumpserver
+### Copy files to/from server via jumpserver
 
-If you want to copy files to the server via a springboard, you can use the `scp` command in the following format:
+If you want to copy files to / from the server via jumpserver, you can use the `scp` command in the following format:
 
 ```shell
 $ scp -P 2222 ~/Desktop/README.md  gzp@jumpserver:gzp@server2:~/Desktop/README1.md
 README.md                                        100% 9279    73.9KB/s   00:00
 ```
 
-Note the use of `:` after `gzp@jumpserver` plus the `key` and `username` of the server you need to transfer, and finally write the destination path.
-Folder transfer is currently not supported. Please compress the file and upload it.
+```shell
+scp -P 2222 gzp@127.0.0.1:gzp@server2:~/Desktop/video.mp4 ~/Downloads
+video.mp4                           100%   10MB  58.8MB/s   00:00
+```
 
-### Copy files from server via jumpserver
-
-> To do
+Note the use of `:` after `gzp@jumpserver` plus the `key` and `username` of the server you need to transfer, and finally write the destination / source path.
+Folder transfer is currently not supported. Please compress the file and upload / download it.

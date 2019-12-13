@@ -8,10 +8,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/TNK-Studio/gortal/config"
+	"github.com/TNK-Studio/gortal/utils"
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -79,36 +79,225 @@ func (r *response) GetMessage() string {
 }
 
 // ExecuteSCP ExecuteSCP
-func ExecuteSCP(args []string, sess *ssh.Session) error {
-	err := replyOk(sess)
-	if err != nil {
-		return err
-	}
-
-	bufferedReader := bufio.NewReader(*sess)
-	message, err := bufferedReader.ReadString('\n')
-	if err != nil {
-		replyErr(sess, err)
-		return err
-	}
-
-	flag, perm, size, filename, err := parseMsg(message)
-	if err != nil {
-		replyErr(sess, err)
-		return err
-	}
+func ExecuteSCP(args []string, clientSess *ssh.Session) error {
+	flag := args[0]
 	switch flag {
-	case flagCopyFile:
-		err = copyFileToServer(bufferedReader, size, filename, args[1], perm, sess)
+	case "-t":
+		err := copyToServer(args, clientSess)
 		if err != nil {
-			replyErr(sess, err)
+			replyErr(*clientSess, err)
 			return err
 		}
+	case "-f":
+		err := copyFromServer(args, clientSess)
+		if err != nil {
+			replyErr(*clientSess, err)
+			return err
+		}
+		(*clientSess).Close()
+	default:
+		return errors.New("This feature is not currently supported")
+	}
+
+	return nil
+}
+
+func copyToServer(args []string, clientSess *ssh.Session) error {
+	err := replyOk(*clientSess)
+	if err != nil {
+		return err
+	}
+
+	bufferedReader := bufio.NewReader(*clientSess)
+	b, err := bufferedReader.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	flag := string(b)
+	switch flag {
+	case flagCopyFile:
+		var perm string
+		var size int64
+		var filename string
+		n, err := fmt.Fscanf(bufferedReader, "%s %d %s\n", &perm, &size, &filename)
+
+		if err != nil {
+			return err
+		}
+		if n != 3 {
+			return fmt.Errorf("unexpected count in reading start directory message header: n=%d", 3)
+		}
+
+		err = copyFileToServer(bufferedReader, size, filename, args[1], perm, clientSess)
+		if err != nil {
+			return err
+		}
+		return nil
 	case flagEndDirectory:
 	case flagStartDirectory:
-		replyErr(sess, errors.New("Folder transfer is not yet supported. You can try to compress the folder and upload it. "))
+		return errors.New("Folder transfer is not yet supported. You can try to compress the folder and upload it. ")
 	default:
-		return nil
+		return fmt.Errorf("expected control record")
+	}
+
+	return nil
+}
+
+func copyFromServer(args []string, clientSess *ssh.Session) error {
+	sshUser, server, filePath, err := parseServerPath(args[1], "", (*clientSess).User())
+	if err != nil {
+		return err
+	}
+
+	upstream, err := NewSSHClient(server, sshUser)
+	if err != nil {
+		return err
+	}
+
+	upstreamSess, err := upstream.NewSession()
+	if err != nil {
+		return err
+	}
+
+	errCh := make(chan error, 2)
+	defer func() {
+		select {
+		case <-errCh:
+			return
+		default:
+		}
+		close(errCh)
+	}()
+
+	stdout, err := upstreamSess.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	stdin, err := upstreamSess.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	err = upstreamSess.Start(fmt.Sprintf("scp -f %s", filePath))
+	if err != nil {
+		return err
+	}
+	go func() {
+		defer stdin.Close()
+
+		err := replyOk(stdin)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		stdOutReader := bufio.NewReader(stdout)
+		b, err := stdOutReader.ReadByte()
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if b == responseError {
+			message, err := stdOutReader.ReadString('\n')
+			if err != nil {
+				errCh <- err
+				return
+			}
+			errCh <- errors.New(message)
+			return
+		}
+
+		flag := string(b)
+		switch flag {
+		case flagCopyFile:
+			var perm string
+			var size int64
+			var filename string
+			n, err := fmt.Fscanf(stdOutReader, "%s %d %s\n", &perm, &size, &filename)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if n != 3 {
+				errCh <- fmt.Errorf("unexpected count in reading start directory message header: n=%d", 3)
+			}
+			err = replyOk(stdin)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			err = copyFileFromServer(stdOutReader, size, filename, perm, clientSess)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			return
+		case flagEndDirectory:
+		case flagStartDirectory:
+			errCh <- errors.New("Folder transfer is not yet supported. You can try to compress the folder and upload it. ")
+			return
+		default:
+			errCh <- fmt.Errorf("expected control record")
+			return
+		}
+
+	}()
+
+	upstreamSess.Wait()
+
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func copyFileFromServer(bfReader *bufio.Reader, size int64, filename string, perm string, clientSess *ssh.Session) error {
+	tmpFilePath, tmp, err := createTmpFile(bfReader, perm, size)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		tmp.Close()
+		if utils.FileExited(tmpFilePath) {
+			os.Remove(tmpFilePath)
+		}
+	}()
+
+	tmpReader := bufio.NewReader(tmp)
+	err = copyToClientSession(tmpReader, clientSess, perm, filename, size)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyToClientSession(tmpReader *bufio.Reader, clientSess *ssh.Session, perm, filename string, size int64) error {
+	if err := checkResponse(*clientSess); err != nil {
+		return err
+	}
+
+	_, err := fmt.Fprintln(*clientSess, flagCopyFile+perm, size, filename)
+	if err != nil {
+		return err
+	}
+
+	if err := checkResponse(*clientSess); err != nil {
+		return err
+	}
+
+	io.Copy(*clientSess, tmpReader)
+
+	_, err = fmt.Fprint(*clientSess, "\x00")
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -170,22 +359,6 @@ loop:
 	return user, server, remotePath, nil
 }
 
-// waitTimeout waits for the waitgroup for the specified max timeout.
-// Returns true if waiting timed out.
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
-	}
-}
-
 func checkResponse(r io.Reader) error {
 	response, err := parseResponse(r)
 	if err != nil {
@@ -200,32 +373,32 @@ func checkResponse(r io.Reader) error {
 
 }
 
-func copyFileToServer(bfReader *bufio.Reader, size int64, filename, filePath string, perm string, sess *ssh.Session) error {
-	sshUser, server, filePath, err := parseServerPath(filePath, filename, (*sess).User())
+func copyFileToServer(bfReader *bufio.Reader, size int64, filename, filePath string, perm string, clientSess *ssh.Session) error {
+	sshUser, server, filePath, err := parseServerPath(filePath, filename, (*clientSess).User())
 	if err != nil {
 		return err
 	}
-	err = replyOk(sess)
-	if err != nil {
-		return err
-	}
-
-	client, err := NewSSHClient(server, sshUser)
+	err = replyOk(*clientSess)
 	if err != nil {
 		return err
 	}
 
-	clientSess, err := client.NewSession()
+	upstream, err := NewSSHClient(server, sshUser)
 	if err != nil {
 		return err
 	}
 
-	err = copyToSession(bfReader, clientSess, perm, filePath, filename, size)
+	upstreamSess, err := upstream.NewSession()
 	if err != nil {
 		return err
 	}
 
-	err = replyOk(sess)
+	err = copyToUpstreamSession(bfReader, upstreamSess, perm, filePath, filename, size)
+	if err != nil {
+		return err
+	}
+
+	err = replyOk(*clientSess)
 	if err != nil {
 		return err
 	}
@@ -233,10 +406,7 @@ func copyFileToServer(bfReader *bufio.Reader, size int64, filename, filePath str
 	return nil
 }
 
-func copyToSession(r *bufio.Reader, clientSess *gossh.Session, perm, filePath, filename string, size int64) error {
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
+func copyToUpstreamSession(r *bufio.Reader, upstreamSess *gossh.Session, perm, filePath, filename string, size int64) error {
 	errCh := make(chan error, 2)
 	defer func() {
 		select {
@@ -246,32 +416,30 @@ func copyToSession(r *bufio.Reader, clientSess *gossh.Session, perm, filePath, f
 		}
 		close(errCh)
 	}()
+	stdout, err := upstreamSess.StdoutPipe()
+	if err != nil {
+		return err
+	}
 
-	stdout, err := clientSess.StdoutPipe()
+	stdin, err := upstreamSess.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	err = upstreamSess.Start(fmt.Sprintf("scp -t %s", filePath))
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		defer wg.Done()
-		w, err := clientSess.StdinPipe()
-		if err != nil {
-			errCh <- err
-			return
-		}
-
-		defer w.Close()
-		if err != nil {
-			errCh <- err
-			return
-		}
+		defer stdin.Close()
 
 		if err = checkResponse(stdout); err != nil {
 			errCh <- err
 			return
 		}
 
-		_, err = fmt.Fprintln(w, flagCopyFile+perm, size, filename)
+		_, err = fmt.Fprintln(stdin, flagCopyFile+perm, size, filename)
 		if err != nil {
 			errCh <- err
 			return
@@ -283,16 +451,26 @@ func copyToSession(r *bufio.Reader, clientSess *gossh.Session, perm, filePath, f
 		}
 
 		// Create a temp file
-		tmp, err := createTmpFile(r, perm, size)
+		tmpFilePath, tmp, err := createTmpFile(r, perm, size)
+		defer func() {
+			tmp.Close()
+			if utils.FileExited(tmpFilePath) {
+				os.Remove(tmpFilePath)
+			}
+		}()
+
 		if err != nil {
 			errCh <- err
 			return
 		}
+		defer func() {
+			tmp.Close()
+		}()
 
 		tmpReader := bufio.NewReader(tmp)
-		io.Copy(w, tmpReader)
+		io.Copy(stdin, tmpReader)
 
-		_, err = fmt.Fprint(w, "\x00")
+		_, err = fmt.Fprint(stdin, "\x00")
 		if err != nil {
 			errCh <- err
 			return
@@ -304,26 +482,7 @@ func copyToSession(r *bufio.Reader, clientSess *gossh.Session, perm, filePath, f
 		}
 	}()
 
-	go func() {
-		defer wg.Done()
-		if err := clientSess.Run(fmt.Sprintf("scp -t %s", filePath)); err == nil {
-			return
-		}
-
-		if err = checkResponse(stdout); err != nil {
-			errCh <- err
-			return
-		}
-
-	}()
-
-	// if waitTimeout(&wg, time.Second*300) {
-	// 	return errors.New("timeout when upload files")
-	// }
-	//
-
-	// Todo Timeout Handling
-	wg.Wait()
+	upstreamSess.Wait()
 
 	close(errCh)
 	for err := range errCh {
@@ -335,16 +494,16 @@ func copyToSession(r *bufio.Reader, clientSess *gossh.Session, perm, filePath, f
 	return nil
 }
 
-func createTmpFile(r *bufio.Reader, perm string, size int64) (*os.File, error) {
+func createTmpFile(r *bufio.Reader, perm string, size int64) (string, *os.File, error) {
 	fileMode, err := strconv.ParseUint(perm, 8, 0)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	tmpFilePath := fmt.Sprintf("/tmp/gortal-tmp-file-%d", time.Now().UnixNano())
 	f, err := os.OpenFile(tmpFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(fileMode))
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	defer func() {
@@ -360,60 +519,36 @@ func createTmpFile(r *bufio.Reader, perm string, size int64) (*os.File, error) {
 		buffSize := int64(n)
 
 		if err != nil && err != io.EOF {
-			return nil, err
+			return "", nil, err
 		}
 
 		if off+buffSize > size && buf[n-1] == '\x00' {
 			_, err := f.WriteAt(buf[:n-1], off)
 			if err != nil {
-				return nil, err
+				return "", nil, err
 			}
 			break
 		} else if off+buffSize > size && buf[n-1] != '\x00' {
-			return nil, errors.New("File size not match. ")
+			return "", nil, errors.New("File size not match. ")
 		}
 
 		_, err = f.WriteAt(buf, off)
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
 		off = off + buffSize
 	}
 
 	tmp, err := os.Open(tmpFilePath)
 	if err != nil {
-		return nil, err
+		return tmpFilePath, nil, err
 	}
 
-	return tmp, nil
+	return "", tmp, nil
 }
 
-func parseMsg(msg string) (string, string, int64, string, error) {
-	strs := strings.Split(msg, " ")
-	if len(strs) < 3 {
-		return "", "0644", 0, "", errors.New("Message parsed error")
-	}
-
-	size, err := strconv.Atoi(strs[1])
-	if err != nil {
-		return "", "0644", 0, "", errors.New("Message parsed error")
-	}
-
-	permissions, filename := strs[0], strs[2]
-
-	flag := permissions[0:1]
-	permissions = permissions[1:]
-	filename = filename[:len(filename)-1]
-
-	if err != nil {
-		return "", "0644", 0, "", errors.New("Message parsed error")
-	}
-
-	return flag, permissions, int64(size), filename, nil
-}
-
-func replyOk(sess *ssh.Session) error {
-	bufferedWriter := bufio.NewWriter(*sess)
+func replyOk(w io.Writer) error {
+	bufferedWriter := bufio.NewWriter(w)
 	_, err := bufferedWriter.Write([]byte{responseOk})
 
 	if err != nil {
@@ -427,8 +562,8 @@ func replyOk(sess *ssh.Session) error {
 	return nil
 }
 
-func replyErr(sess *ssh.Session, replyErr error) error {
-	bufferedWriter := bufio.NewWriter(*sess)
+func replyErr(w io.Writer, replyErr error) error {
+	bufferedWriter := bufio.NewWriter(w)
 	_, err := bufferedWriter.Write([]byte{responseError})
 	_, err = bufferedWriter.Write([]byte(strings.ReplaceAll(replyErr.Error(), "\n", " ")))
 	_, err = bufferedWriter.Write([]byte{'\n'})
