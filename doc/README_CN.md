@@ -77,7 +77,7 @@ README.md                                        100% 9279    73.9KB/s   00:00
 ```
 
 ```shell
-scp -P 2222 gzp@127.0.0.1:gzp@server2:~/Desktop/video.mp4 ~/Downloads
+scp -P 2222 gzp@jumpserver:gzp@server2:~/Desktop/video.mp4 ~/Downloads
 video.mp4                           100%   10MB  58.8MB/s   00:00
 ```
 
