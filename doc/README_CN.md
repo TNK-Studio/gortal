@@ -67,17 +67,18 @@ Use the arrow keys to navigate: ↓ ↑ → ←
 
 再次使用你的密码登录后就可以使用了。  
 
-### 通过跳板机复制文件到服务器  
+### 通过跳板机上传或下载文件到服务器  
 
-如果你想通过跳板机复制文件到服务器，你可以通过 `scp` 命令按照以下格式：  
+如果你想通过跳板机上传或下载文件到服务器，你可以通过 `scp` 命令按照以下格式：  
 
 ```shell
 $ scp -P 2222 ~/Desktop/README.md  gzp@jumpserver:gzp@server2:~/Desktop/README1.md
 README.md                                        100% 9279    73.9KB/s   00:00
 ```
 
-注意在 `gzp@jumpserver` 后面用 `:` 加上你需要传输的服务器的 `key` 和 `username`，最后写上目标路径。目前不支持文件夹复制，请压缩文件后在上传。  
+```shell
+scp -P 2222 gzp@127.0.0.1:gzp@server2:~/Desktop/video.mp4 ~/Downloads
+video.mp4                           100%   10MB  58.8MB/s   00:00
+```
 
-### 通过跳板机从服务器复制文件  
-
-> 功能待开发  
+注意在 `gzp@jumpserver` 后面用 `:` 加上你需要传输的服务器的 `key` 和 `username`，最后写上目标路径或源文件路径。目前不支持文件夹复制，请压缩文件后在上传或下载。  

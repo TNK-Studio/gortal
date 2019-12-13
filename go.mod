@@ -11,6 +11,8 @@ require (
 	github.com/helloyi/go-sshclient v0.0.0-20191203124208-f1e205501005
 	github.com/manifoldco/promptui v0.6.0 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
+	golang.org/x/tools v0.0.0-20191213032237-7093a17b0467 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
