@@ -11,7 +11,7 @@ import (
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/fatih/color"
-	"github.com/gliderlabs/ssh"
+	"github.com/elfgzp/ssh"
 	"github.com/helloyi/go-sshclient"
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -30,23 +30,40 @@ func GetClientByPasswd(username, host string, port int, passwd string) (*sshclie
 	return client, nil
 }
 
-// Connect connect server
-func Connect(host string, port int, username string, privKeyFile string, sess *ssh.Session) error {
-	client, err := sshclient.DialWithKey(
-		fmt.Sprintf("%s:%d", host, port),
-		username,
-		utils.FilePath(privKeyFile),
-	)
-
+// NewTerminal NewTerminal
+func NewTerminal(server *config.Server, sshUser *config.SSHUser, sess *ssh.Session) error {
+	upstreamClient, err := NewSSHClient(server, sshUser)
 	if err != nil {
+		return nil
+	}
+
+	upstreamSess, err := upstreamClient.NewSession()
+	if err != nil {
+		return nil
+	}
+	defer upstreamSess.Close()
+
+	upstreamSess.Stdout = *sess
+	upstreamSess.Stdin = *sess
+	upstreamSess.Stderr = *sess
+
+	pty, winCh, _ := (*sess).Pty()
+
+	if err := upstreamSess.RequestPty(pty.Term, pty.Window.Height, pty.Window.Width, pty.TerminalModes); err != nil {
 		return err
 	}
 
-	// default terminal
+	if err := upstreamSess.Shell(); err != nil {
+		return err
+	}
+	
+	go func () {
+		for win := range winCh {
+			upstreamSess.WindowChange(win.Height, win.Width)
+		}
+	}()
 
-	terminal := client.Terminal(nil)
-	terminal = terminal.SetStdio(*sess, *sess, *sess)
-	if terminal.Start(); err != nil {
+	if err := upstreamSess.Wait(); err != nil {
 		return err
 	}
 

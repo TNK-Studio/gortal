@@ -13,7 +13,7 @@ import (
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
-	"github.com/gliderlabs/ssh"
+	"github.com/elfgzp/ssh"
 )
 
 // AddServer add server to config
@@ -258,13 +258,8 @@ func GetServerSSHUsersMenu(server *config.Server) func(int, *MenuItem, *ssh.Sess
 					Label: sshUser.SSHUsername,
 					Info:  info,
 					SelectedFunc: func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
-						err := sshd.Connect(
-							server.Host,
-							server.Port,
-							sshUser.SSHUsername,
-							sshUser.IdentityFile,
-							sess,
-						)
+
+						err := sshd.NewTerminal(server, sshUser, sess)
 						if err != nil {
 							return err
 						}
