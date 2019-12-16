@@ -6,7 +6,7 @@ import (
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/sshd"
-	"github.com/gliderlabs/ssh"
+	"github.com/elfgzp/ssh"
 	gossh "golang.org/x/crypto/ssh"
 )
 

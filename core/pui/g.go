@@ -6,7 +6,7 @@ import (
 	"github.com/TNK-Studio/gortal/core/sshd"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
-	"github.com/gliderlabs/ssh"
+	"github.com/elfgzp/ssh"
 )
 
 // PUI pui

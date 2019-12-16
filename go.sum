@@ -19,6 +19,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/elfgzp/promptui v0.6.1-0.20191206043126-fe9f1cb63392 h1:x0R9W3lhJkGM/IUU4rdMde20xYtSmFg9dE8lSJAqAsY=
 github.com/elfgzp/promptui v0.6.1-0.20191206043126-fe9f1cb63392/go.mod h1:BTKy3EDcFMT26Db0eodL+dqBYHC6YU+uV5esJ9uKUjU=
+github.com/elfgzp/ssh v0.2.3-0.20191216164622-8b19b11c3f60 h1:htwrZ6vsjDLQ2kEdOch7Xjqolg6E1NFl8tZwTDWQ1KQ=
+github.com/elfgzp/ssh v0.2.3-0.20191216164622-8b19b11c3f60/go.mod h1:v3RDlhmPwxWky2XAjOSnK0XrWX0hNhU/qlY+kwT9gJc=
+github.com/elfgzp/ssh v0.2.3-0.20191216171309-38f1cb660799 h1:x51xIMCxP2lqyTKlfCF0JvSmAJnb4fuM0QZHDWMC7Gs=
+github.com/elfgzp/ssh v0.2.3-0.20191216171309-38f1cb660799/go.mod h1:v3RDlhmPwxWky2XAjOSnK0XrWX0hNhU/qlY+kwT9gJc=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 h1:BHsljHzVlRcyQhjrss6TZTdY2VfCqZPbv5k3iBFa2ZQ=

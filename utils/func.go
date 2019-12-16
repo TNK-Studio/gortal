@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/gliderlabs/ssh"
+import "github.com/elfgzp/ssh"
 
 // If If
 func If(condition bool, trueVal, falseVal interface{}) interface{} {

@@ -20,3 +20,4 @@ debug
 __debug_bin
 vendor/*
 !vendor/vendor.json
+./volumes

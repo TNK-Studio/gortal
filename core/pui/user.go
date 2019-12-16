@@ -9,7 +9,7 @@ import (
 	"github.com/TNK-Studio/gortal/utils"
 	"github.com/TNK-Studio/gortal/utils/logger"
 	"github.com/elfgzp/promptui"
-	"github.com/gliderlabs/ssh"
+	"github.com/elfgzp/ssh"
 )
 
 // CreateUser new user
