@@ -36,6 +36,7 @@ type User struct {
 	Username   string `yaml:"username"`
 	HashPasswd string `yaml:"hashPasswd"`
 	Admin      bool   `yaml:"admin"`
+	PublicKey  string `yaml:"publickey"`
 }
 
 // Server server
@@ -100,12 +101,13 @@ func (c *Config) SaveTo(path string) error {
 }
 
 // AddUser add user to config
-func (c *Config) AddUser(username string, password string, IsAdmin bool) (string, *User) {
+func (c *Config) AddUser(username string, password string, IsAdmin bool, pubKey string) (string, *User) {
 	// Todo Add sha256 password
 	user := &User{
 		Username:   username,
 		HashPasswd: password,
 		Admin:      IsAdmin,
+		PublicKey:  pubKey,
 	}
 	userAmount := len(*c.Users) + 1
 	log.Printf("Add user, user amount: %d", userAmount)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"io/ioutil"
+	"encoding/base64"
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/utils"
@@ -78,6 +80,31 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 		return nil, nil, err
 	}
 
+	publicKeyPui := promptui.Prompt{
+		Label: "Your publicKey's position: ",
+		Validate: MultiValidate([]func(string) error{
+			func(input string) error {
+				if !utils.FileExited(input) {
+					return errors.New("File not found")
+				}
+				return nil
+			},
+		}),
+		Stdin:  stdio,
+		Stdout: stdio,
+	}
+
+	publicKeyPos, err := publicKeyPui.Run()
+	if err != nil {
+		return nil, nil, err
+	}
+	publicKeyFile, err := ioutil.ReadFile(utils.FilePath(publicKeyPos))
+	if err != nil {
+		logger.Logger.Warningf("Error reading publicKey file: %s\n", err)
+		return nil, nil, err
+	}
+	publicKeyBase64:= base64.StdEncoding.EncodeToString(publicKeyFile)
+
 	IsAdminString := ""
 	if showAdminSelect && !isAdmin {
 		adminPui := promptui.Prompt{
@@ -97,7 +124,7 @@ func CreateUser(showAdminSelect bool, isAdmin bool, sess *ssh.Session) (*string,
 	if isAdmin {
 		logger.Logger.Info("Create a admin user")
 	}
-	key, user := config.Conf.AddUser(username, passwd, isAdmin)
+	key, user := config.Conf.AddUser(username, passwd, isAdmin, publicKeyBase64)
 	return &key, user, nil
 }
 
