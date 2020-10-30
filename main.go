@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"encoding/base64"
 
 	"github.com/TNK-Studio/gortal/config"
 	"github.com/TNK-Studio/gortal/core/jump"
@@ -38,6 +39,22 @@ func passwordAuth(ctx ssh.Context, pass string) bool {
 		time.Sleep(time.Second * 3)
 	}
 	return success
+}
+
+func publickKeyAuth(ctx ssh.Context, key ssh.PublicKey) bool {
+	var pub string
+
+	config.Conf.ReadFrom(*config.ConfPath)
+	username := ctx.User()
+	for _, user := range *config.Conf.Users {
+		if user.Username == username  {
+			pub = user.PublicKey
+		}
+	}
+	decodeBytes, _ := base64.StdEncoding.DecodeString(pub)
+	allowed, _, _, _, _ := ssh.ParseAuthorizedKey(decodeBytes)
+
+	return ssh.KeysEqual(key, allowed)
 }
 
 func sessionHandler(sess *ssh.Session) {
@@ -90,6 +107,7 @@ func main() {
 		fmt.Sprintf(":%d", *Port),
 		nil,
 		ssh.PasswordAuth(passwordAuth),
+		ssh.PublicKeyAuth(publickKeyAuth),
 		ssh.HostKeyFile(utils.FilePath(*hostKeyFile)),
 	),
 	)

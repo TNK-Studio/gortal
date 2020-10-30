@@ -82,7 +82,7 @@ func init() {
 				Label: "Delete user",
 				GetSubMenu: GetUsersMenu(
 					func(index int, menuItem *MenuItem, sess *ssh.Session, selectedChain []*MenuItem) error {
-						userKey := fmt.Sprintf("user%d", index+1)
+						userKey := fmt.Sprintf("users%d", index+1)
 						user := (*config.Conf.Users)[userKey]
 						if user == nil {
 							return fmt.Errorf("Key '%s' of user not existed. ", userKey)
