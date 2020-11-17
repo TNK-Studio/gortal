@@ -6,7 +6,7 @@ RUN mkdir /root/.ssh
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o gortal main.go
+RUN CGO_ENABLED=0 go build ./
 # CGO_ENABLED=0
 # Change go-release.action
 
