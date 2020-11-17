@@ -1,4 +1,4 @@
-FROM golang:1.14.12 AS builder
+FROM golang:1.14.12-alpine AS builder
 RUN apk add --no-cache curl jq git build-base
 WORKDIR /opt
 RUN cd /opt
