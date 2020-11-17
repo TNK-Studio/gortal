@@ -15,6 +15,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: "386"
         GOOS: linux
+        MAIN_GO_PATH: ./main.go
   release-linux-amd64:
     name: release linux/amd64
     runs-on: ubuntu-latest
@@ -26,6 +27,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: amd64
         GOOS: linux
+        MAIN_GO_PATH: ./main.go
   release-darwin-386:
     name: release darwin/386
     runs-on: ubuntu-latest
@@ -37,6 +39,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: "386"
         GOOS: darwin
+        MAIN_GO_PATH: ./main.go
   release-darwin-amd64:
     name: release darwin/amd64
     runs-on: ubuntu-latest
@@ -48,6 +51,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: amd64
         GOOS: darwin
+        MAIN_GO_PATH: ./main.go
   release-windows-386:
     name: release windows/386
     runs-on: ubuntu-latest
@@ -59,6 +63,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: "386"
         GOOS: windows
+        MAIN_GO_PATH: ./main.go
   release-windows-amd64:
     name: release windows/amd64
     runs-on: ubuntu-latest
@@ -70,3 +75,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         GOARCH: amd64
         GOOS: windows
+        MAIN_GO_PATH: ./main.go
