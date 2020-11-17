@@ -7,6 +7,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build
+# CGO_ENABLED=0
+# Change go-release.action
 
 FROM alpine:latest
 LABEL maintainer="Elf Gzp <gzp@741424975@gmail.com> (https://elfgzp.cn)"
