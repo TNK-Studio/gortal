@@ -1,4 +1,4 @@
-FROM golang:1.14-alpine AS builder
+FROM golang:1.14.12 AS builder
 RUN apk add --no-cache curl jq git build-base
 WORKDIR /opt
 RUN cd /opt
@@ -6,7 +6,7 @@ RUN mkdir /root/.ssh
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build
+RUN CGO_ENABLED=0 go build
 
 FROM alpine:latest
 LABEL maintainer="Elf Gzp <gzp@741424975@gmail.com> (https://elfgzp.cn)"
